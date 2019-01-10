@@ -35,12 +35,16 @@ public class RdbConfigMonitor {
     public void init(String key, RdbAdapter rdbAdapter) {
         this.key = key;
         this.rdbAdapter = rdbAdapter;
+        //1.获取resources下rdb文件路径
         File confDir = Util.getConfDirPath(adapterName);
         try {
+            //2、对rdb下的yml文件进行监控变化
             FileAlterationObserver observer = new FileAlterationObserver(confDir,
-                FileFilterUtils.and(FileFilterUtils.fileFileFilter(), FileFilterUtils.suffixFileFilter("yml")));
+                    FileFilterUtils.and(FileFilterUtils.fileFileFilter(), FileFilterUtils.suffixFileFilter("yml")));
             FileListener listener = new FileListener();
+            //3、为观察对象添加收听对象
             observer.addListener(listener);
+            //4、配置Monitor，第一个参数单位是毫秒，是监听的间隔；第二个参数就是绑定我们之前的观察对象。
             fileMonitor = new FileAlterationMonitor(3000, observer);
             fileMonitor.start();
 
