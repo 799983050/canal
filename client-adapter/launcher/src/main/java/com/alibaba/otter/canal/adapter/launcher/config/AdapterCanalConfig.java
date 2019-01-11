@@ -19,6 +19,13 @@ import com.alibaba.otter.canal.client.adapter.support.DatasourceConfig;
  * @author rewerma @ 2018-10-20
  * @version 1.0.0
  */
+
+/**
+ * 通过“@ConfigurationProperties(prefix="db")”注解，
+ * 配置属性中以“db”为前缀的属性值会被自动绑定到 Java 类中同名的域上，
+ * 如 url 域的值会对应属性“db.url”的值。只需要在应用的配置类中添加“@EnableConfigurationProperties”
+ * 注解就可以启用该自动绑定功能。
+ */
 @Component
 @ConfigurationProperties(prefix = "canal.conf")
 public class AdapterCanalConfig extends CanalClientConfig {
