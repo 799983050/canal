@@ -26,7 +26,8 @@ import com.alibaba.otter.canal.client.adapter.support.DatasourceConfig;
  * @version 1.0.0
  */
 @Component
-@RefreshScope//热刷新注解
+//热加载配置文件application.yml，自动重启服务
+@RefreshScope
 public class CanalAdapterService {
 
     private static final Logger        logger        = LoggerFactory.getLogger(CanalAdapterService.class);
