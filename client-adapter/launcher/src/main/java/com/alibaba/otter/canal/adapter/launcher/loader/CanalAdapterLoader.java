@@ -41,19 +41,24 @@ public class CanalAdapterLoader {
     }
 
     /**
-     * 初始化canal-client
+     * 初始化canal-client    加载application.yml的配置
      */
     public void init() {
+        //通过SPI 类加载器加载外部适配器  加载所有实现该注解的类
         loader = ExtensionLoader.getExtensionLoader(OuterAdapter.class);
-
+        //获取canalserver端的host
         String canalServerHost = this.canalClientConfig.getCanalServerHost();
+        //切割host
         SocketAddress sa = null;
         if (canalServerHost != null) {
             String[] ipPort = canalServerHost.split(":");
             sa = new InetSocketAddress(ipPort[0], Integer.parseInt(ipPort[1]));
         }
+        //获取zk地址
         String zkHosts = this.canalClientConfig.getZookeeperHosts();
 
+
+        //加载外部适配器的连接信息
         if ("tcp".equalsIgnoreCase(canalClientConfig.getMode())) {
             // 初始化canal-client的适配器
             for (CanalClientConfig.CanalAdapter canalAdapter : canalClientConfig.getCanalAdapters()) {

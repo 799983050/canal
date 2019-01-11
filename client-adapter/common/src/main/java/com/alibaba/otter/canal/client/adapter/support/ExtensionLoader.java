@@ -20,7 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * SPI 类加载器
+ *
  *
  * @author rewerma 2018-8-19 下午11:30:49
  * @version 1.0.0

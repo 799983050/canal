@@ -2,9 +2,6 @@ server:
   port: 8081
 logging:
   level:
-    org.springframework: WARN
-    com.alibaba.otter.canal.client.adapter.hbase: DEBUG
-    com.alibaba.otter.canal.client.adapter.es: DEBUG
     com.alibaba.otter.canal.client.adapter.rdb: DEBUG
 spring:
   jackson:
@@ -13,42 +10,42 @@ spring:
     default-property-inclusion: non_null
 
 canal.conf:
-  canalServerHost: 127.0.0.1:11111
-#  zookeeperHosts: slave1:2181
-#  mqServers: 127.0.0.1:9092 #or rocketmq
+#  canalServerHost: 192.168.0.121:11111
+  zookeeperHosts: 192.168.0.121:2181
+#  mqServers: 127.0.0.1:9876
 #  flatMessage: true
-  batchSize: 500
-  syncBatchSize: 1000
+  batchSize: 5
+  syncBatchSize: 5
   retries: 0
   timeout:
   accessKey:
   secretKey:
   mode: tcp # kafka rocketMQ
-#  srcDataSources:
-#    defaultDS:
-#      url: jdbc:mysql://127.0.0.1:3306/mytest?useUnicode=true
-#      username: root
-#      password: 121212
+  srcDataSources:
+    defaultDS:
+      url: jdbc:mysql://192.168.0.121:3306/mytest?useUnicode=true&useSSL=false
+      username: cuitong
+      password: root
   canalAdapters:
   - instance: example # canal instance Name or mq topic name
     groups:
     - groupId: g1
       outerAdapters:
       - name: logger
+      - name: rdb
+        key: mysql1
+        properties:
+          jdbc.driverClassName: com.mysql.jdbc.Driver
+          jdbc.url: jdbc:mysql://192.168.0.141/mytest?useUnicode=true&useSSL=false
+          jdbc.username: cuitong
+          jdbc.password: root
 #      - name: rdb
-#        key: mysql1
-#        properties:
-#          jdbc.driverClassName: com.mysql.jdbc.Driver
-#          jdbc.url: jdbc:mysql://127.0.0.1:3306/mytest2?useUnicode=true
-#          jdbc.username: root
-#          jdbc.password: 121212
-#      - name: rdb
-#        key: oracle1
+#        key: mysql2
 #        properties:
 #          jdbc.driverClassName: oracle.jdbc.OracleDriver
-#          jdbc.url: jdbc:oracle:thin:@localhost:49161:XE
-#          jdbc.username: mytest
-#          jdbc.password: m121212
+#          jdbc.url: jdbc:mysql://192.168.0.126/mytest?useUnicode=true&useSSL=false
+#          jdbc.username: root
+#          jdbc.password: root
 #      - name: rdb
 #        key: postgres1
 #        properties:

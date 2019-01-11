@@ -20,7 +20,9 @@ import org.yaml.snakeyaml.Yaml;
 
 import com.alibaba.otter.canal.adapter.launcher.loader.CanalAdapterService;
 import com.alibaba.otter.canal.client.adapter.support.Util;
-
+/**
+ *   对application.yml文件的监听，文件改变则重新进行适配器的初始化
+ */
 @Component
 public class ApplicationConfigMonitor {
 
@@ -38,12 +40,15 @@ public class ApplicationConfigMonitor {
     public void init() {
         File confDir = Util.getConfDirPath();
         try {
+            //对application.yml文件重写的一个监听配置
             FileAlterationObserver observer = new FileAlterationObserver(confDir,
                 FileFilterUtils.and(FileFilterUtils.fileFileFilter(),
                     FileFilterUtils.prefixFileFilter("application"),
                     FileFilterUtils.suffixFileFilter("yml")));
             FileListener listener = new FileListener();
+            //为监察对象添加收听对象
             observer.addListener(listener);
+            //配置Monitor，第一个参数单位是毫秒，是监听的间隔；第二个参数就是绑定我们之前的观察对象。
             fileMonitor = new FileAlterationMonitor(3000, observer);
             fileMonitor.start();
 
@@ -69,10 +74,10 @@ public class ApplicationConfigMonitor {
             try {
                 // 检查yml格式
                 new Yaml().loadAs(new FileReader(file), Map.class);
-
+                //关闭适配器的连接
                 canalAdapterService.destroy();
 
-                // refresh context
+                // refresh context   springboot的热更新
                 contextRefresher.refresh();
 
                 try {
@@ -80,6 +85,7 @@ public class ApplicationConfigMonitor {
                 } catch (InterruptedException e) {
                     // ignore
                 }
+                //开启适配器的连接
                 canalAdapterService.init();
                 logger.info("## adapter application config reloaded.");
             } catch (Exception e) {

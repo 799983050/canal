@@ -26,7 +26,7 @@ import com.alibaba.otter.canal.client.adapter.support.DatasourceConfig;
  * @version 1.0.0
  */
 @Component
-@RefreshScope
+@RefreshScope//热刷新注解
 public class CanalAdapterService {
 
     private static final Logger        logger        = LoggerFactory.getLogger(CanalAdapterService.class);
@@ -57,6 +57,7 @@ public class CanalAdapterService {
             return;
         }
         try {
+            //加载外部类适配器
             logger.info("## start the canal client adapters.");
             adapterLoader = new CanalAdapterLoader(adapterCanalConfig);
             adapterLoader.init();
