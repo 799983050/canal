@@ -214,7 +214,8 @@ public class RdbSyncService {
         if (data == null || data.isEmpty()) {
             return;
         }
-
+        //获取mytest_user.yml的目标表配置信息
+        //如果添加mongodb的数据同步的时候，可以针对此方法修改 ，同时可以自定义配置字段
         DbMapping dbMapping = config.getDbMapping();
 
         Map<String, String> columnsMap = SyncUtil.getColumnsMap(dbMapping, data);

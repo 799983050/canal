@@ -23,6 +23,10 @@ import com.alibaba.otter.canal.protocol.Message;
 /**
  * 适配器工作线程抽象类
  *
+ *
+ * DML 是数据库binlog日志的封装
+ *
+ *
  * @author rewerma 2018-8-19 下午11:30:49
  * @version 1.0.0
  */
@@ -45,7 +49,9 @@ public abstract class AbstractCanalAdapterWorker {
         this.groupInnerExecutorService = Executors.newFixedThreadPool(canalOuterAdapters.size());
         syncSwitch = (SyncSwitch) SpringContext.getBean(SyncSwitch.class);
     }
-
+    /**
+     * 开启线程，多线程同步运行适配器
+     */
     protected void writeOut(final Message message) {
         List<Future<Boolean>> futures = new ArrayList<>();
         // 组间适配器并行运行
