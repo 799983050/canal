@@ -43,6 +43,7 @@ public class SyncSwitch {
 
     @PostConstruct
     public void init() {
+        //使用zk分布式，会进行分布式加锁
         CuratorFramework curator = curatorClient.getCurator();
         if (curator != null) {
             mode = Mode.DISTRIBUTED;

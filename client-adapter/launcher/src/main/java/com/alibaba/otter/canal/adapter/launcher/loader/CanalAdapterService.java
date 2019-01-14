@@ -24,6 +24,9 @@ import com.alibaba.otter.canal.client.adapter.support.DatasourceConfig;
  *
  * @author rewerma @ 2018-10-20
  * @version 1.0.0
+ *
+ * 热加载的主要事为了配置文件修改后能够动态改变
+ *
  */
 @Component
 //热加载配置文件application.yml，自动重启服务
@@ -68,7 +71,7 @@ public class CanalAdapterService {
             logger.error("## something goes wrong when starting up the canal client adapters:", e);
         }
     }
-
+    //该注解是为了在spring容器关闭后调用的方法   主要用于资源的释放
     @PreDestroy
     public synchronized void destroy() {
         if (!running) {

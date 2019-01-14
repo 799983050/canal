@@ -154,12 +154,14 @@ public class AdapterRemoteConfigMonitor {
      * 获取有变动的adapter配置
      * 
      * @return Map[0]: 新增修改的配置, Map[1]: 删除的配置
+     *
      */
     @SuppressWarnings("unchecked")
     private Map<String, ConfigItem>[] getModifiedAdapterConfigs() {
         Map<String, ConfigItem>[] res = new Map[2];
         Map<String, ConfigItem> remoteConfigStatus = new HashMap<>();
         String sql = "select id, category, name, modified_time from canal_adapter_config";
+        //使用jdbc的Statement查询数据,去加载对用name的mytest_user1.yml文件,存储对应的信息
         try (Statement stmt = getConn().createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 ConfigItem configItem = new ConfigItem();

@@ -11,6 +11,11 @@ import org.springframework.stereotype.Component;
 /**
  * curator 配置类
  *
+ * zk的分布式锁配置
+ * 参考：https://www.jianshu.com/p/70151fc0ef5d
+ *
+ *
+ *
  * @author rewerma @ 2018-10-20
  * @version 1.0.0
  */

@@ -12,11 +12,16 @@ import org.springframework.core.env.Environment;
 /**
  * Bootstrap级别配置加载
  *
+ *
+ * bootstrap级别的配置加载，优先于application.yml文件加载
+ * appication.yml文件主要用于配置书写
+ *
+ * META-INF  存放程序的入口信息     canal的适配器程序启动后会优先进入此方法中
+ *
  * @author rewerma @ 2019-01-05
  * @version 1.0.0
  */
 public class BootstrapConfiguration {
-
     private static final Logger logger = LoggerFactory.getLogger(BootstrapConfiguration.class);
 
     @Autowired
@@ -33,9 +38,12 @@ public class BootstrapConfiguration {
                 AdapterRemoteConfigMonitor configMonitor = new AdapterRemoteConfigMonitor(jdbcUrl,
                     jdbcUsername,
                     jdbcPassword);
+                //加载远程application.yml配置文件
                 configMonitor.loadRemoteConfig();
+                //加载远程mytest_user1.yml文件
                 configMonitor.loadRemoteAdapterConfigs();
-                configMonitor.start(); // 启动监听
+                // 启动监听
+                configMonitor.start();
             }
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
