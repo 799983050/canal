@@ -56,6 +56,9 @@ public class SyncUtil {
      * @param pstmt 需要设置的preparedStatement
      * @param value 值
      * @param i 索引号
+     *
+     *
+     *          数据类型对应
      */
     public static void setPStmt(int type, PreparedStatement pstmt, Object value, int i) throws SQLException {
         switch (type) {

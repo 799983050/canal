@@ -39,8 +39,11 @@ public class BatchExecutor implements Closeable {
         PreparedStatement pstmt = conn.prepareStatement(sql);
         int len = values.size();
         for (int i = 0; i < len; i++) {
+            //获取类型
             int type = (Integer) values.get(i).get("type");
+            //获取数据
             Object value = values.get(i).get("value");
+            //进行同步
             SyncUtil.setPStmt(type, pstmt, value, i + 1);
         }
 

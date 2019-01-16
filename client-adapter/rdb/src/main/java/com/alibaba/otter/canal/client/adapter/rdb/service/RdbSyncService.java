@@ -225,33 +225,42 @@ public class RdbSyncService {
 
         columnsMap.forEach((targetColumnName, srcColumnName) -> insertSql.append(targetColumnName).append(","));
         int len = insertSql.length();
+        //删除循环列名产生的最后的逗号
         insertSql.delete(len - 1, len).append(") VALUES (");
         int mapLen = columnsMap.size();
+        //根据列名的多少拼装?,
         for (int i = 0; i < mapLen; i++) {
             insertSql.append("?,");
         }
         len = insertSql.length();
+        //删除多拼装的,
         insertSql.delete(len - 1, len).append(")");
-
+        //获取目标字段类型   此方法可以保留作为mongodb的获取目标字段的方法
         Map<String, Integer> ctype = getTargetColumnType(batchExecutor.getConn(), config);
 
         List<Map<String, ?>> values = new ArrayList<>();
         for (Map.Entry<String, String> entry : columnsMap.entrySet()) {
+            //dbMapping    目标字段名称
             String targetColumnName = entry.getKey();
+            //dml.getData   源字段名称
             String srcColumnName = entry.getValue();
             if (srcColumnName == null) {
+                //进行字符的替换  标点符号的替换
                 srcColumnName = Util.cleanColumn(targetColumnName);
             }
-
+            //通过对目标字段转换大写获取字段类型   目标字段类型值
             Integer type = ctype.get(Util.cleanColumn(targetColumnName).toLowerCase());
             if (type == null) {
                 throw new RuntimeException("Target column: " + targetColumnName + " not matched");
             }
+            //获取源字段对应数据
             Object value = data.get(srcColumnName);
+            //绑定源数据对应的目标数据类型的int值
             BatchExecutor.setValue(values, type, value);
         }
 
         try {
+            //同步
             batchExecutor.execute(insertSql.toString(), values);
         } catch (SQLException e) {
             if (skipDupException
