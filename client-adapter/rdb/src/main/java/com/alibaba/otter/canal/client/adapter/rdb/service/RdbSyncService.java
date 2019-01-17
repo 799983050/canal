@@ -353,13 +353,17 @@ public class RdbSyncService {
      * @param dml
      */
     private void delete(BatchExecutor batchExecutor, MappingConfig config, SingleDml dml) throws SQLException {
+        //获取数据列表
         Map<String, Object> data = dml.getData();
         if (data == null || data.isEmpty()) {
             return;
         }
 
+        //获取mytest_user.yml的目标表配置信息
+        //如果添加mongodb的数据同步的时候，可以针对此方法修改 ，同时可以自定义配置字段
         DbMapping dbMapping = config.getDbMapping();
 
+        //获取目标字段类型   此方法可以保留作为mongodb的获取目标字段的方法
         Map<String, Integer> ctype = getTargetColumnType(batchExecutor.getConn(), config);
 
         StringBuilder sql = new StringBuilder();
@@ -382,6 +386,8 @@ public class RdbSyncService {
      * @return 字段sqlType
      */
     private Map<String, Integer> getTargetColumnType(Connection conn, MappingConfig config) {
+        //获取mytest_user.yml的目标表配置信息
+        //如果添加mongodb的数据同步的时候，可以针对此方法修改 ，同时可以自定义配置字段
         DbMapping dbMapping = config.getDbMapping();
         String cacheKey = config.getDestination() + "." + dbMapping.getDatabase() + "." + dbMapping.getTable();
         Map<String, Integer> columnType = columnsTypeCache.get(cacheKey);
