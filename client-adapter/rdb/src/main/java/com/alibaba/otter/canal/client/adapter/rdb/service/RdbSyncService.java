@@ -390,10 +390,13 @@ public class RdbSyncService {
         //如果添加mongodb的数据同步的时候，可以针对此方法修改 ，同时可以自定义配置字段
         DbMapping dbMapping = config.getDbMapping();
         String cacheKey = config.getDestination() + "." + dbMapping.getDatabase() + "." + dbMapping.getTable();
+        //获取字段类型缓存的数据
         Map<String, Integer> columnType = columnsTypeCache.get(cacheKey);
+        //字段缓存为空时，为缓存赋值
         if (columnType == null) {
             synchronized (RdbSyncService.class) {
                 columnType = columnsTypeCache.get(cacheKey);
+                //缓存为空
                 if (columnType == null) {
                     columnType = new LinkedHashMap<>();
                     final Map<String, Integer> columnTypeTmp = columnType;
