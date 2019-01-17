@@ -282,28 +282,37 @@ public class RdbSyncService {
      *
      * @param config 配置项
      * @param dml DML数据
+     *
+     *
+     *    update  table   set  targetColumnName = ?  WHERE  targetColumnName = ?;
      */
     private void update(BatchExecutor batchExecutor, MappingConfig config, SingleDml dml) throws SQLException {
+        //获取数据列表
         Map<String, Object> data = dml.getData();
         if (data == null || data.isEmpty()) {
             return;
         }
-
+        //获取旧数据列表
         Map<String, Object> old = dml.getOld();
         if (old == null || old.isEmpty()) {
             return;
         }
-
+        //获取mytest_user.yml的目标表配置信息
+        //如果添加mongodb的数据同步的时候，可以针对此方法修改 ，同时可以自定义配置字段
         DbMapping dbMapping = config.getDbMapping();
 
-        Map<String, String> columnsMap = SyncUtil.getColumnsMap(dbMapping, data);
 
+        //目标表信息 目标表数据
+        Map<String, String> columnsMap = SyncUtil.getColumnsMap(dbMapping, data);
+        //获取目标字段类型   此方法可以保留作为mongodb的获取目标字段的方法
         Map<String, Integer> ctype = getTargetColumnType(batchExecutor.getConn(), config);
 
         StringBuilder updateSql = new StringBuilder();
         updateSql.append("UPDATE ").append(SyncUtil.getDbTableName(dbMapping)).append(" SET ");
         List<Map<String, ?>> values = new ArrayList<>();
+        //遍历旧数据的 源字段名
         for (String srcColumnName : old.keySet()) {
+            //目标字段名
             List<String> targetColumnNames = new ArrayList<>();
             columnsMap.forEach((targetColumn, srcColumn) -> {
                 if (srcColumnName.toLowerCase().equals(srcColumn)) {
@@ -311,18 +320,22 @@ public class RdbSyncService {
                 }
             });
             if (!targetColumnNames.isEmpty()) {
-
+                //遍历目标字段名
                 for (String targetColumnName : targetColumnNames) {
+                    //set 字段 = ?
                     updateSql.append(targetColumnName).append("=?, ");
+                    //字段类型
                     Integer type = ctype.get(Util.cleanColumn(targetColumnName).toLowerCase());
                     if (type == null) {
                         throw new RuntimeException("Target column: " + targetColumnName + " not matched");
                     }
+                    //绑定源数据对应的目标数据类型的int值
                     BatchExecutor.setValue(values, type, data.get(srcColumnName));
                 }
             }
         }
         int len = updateSql.length();
+        // 去掉循环多余的字符  拼接sql
         updateSql.delete(len - 2, len).append(" WHERE ");
 
         // 拼接主键
@@ -409,11 +422,15 @@ public class RdbSyncService {
                                  List<Map<String, ?>> values, Map<String, Object> d, Map<String, Object> o) {
         // 拼接主键
         for (Map.Entry<String, String> entry : dbMapping.getTargetPk().entrySet()) {
+            // 获取目标主键字段名
             String targetColumnName = entry.getKey();
+            // 获取源主键字段名
             String srcColumnName = entry.getValue();
             if (srcColumnName == null) {
+                // 如果源主键字段名为空  将目标主键字段名赋给源主键
                 srcColumnName = Util.cleanColumn(targetColumnName);
             }
+            //
             sql.append(targetColumnName).append("=? AND ");
             Integer type = ctype.get(Util.cleanColumn(targetColumnName).toLowerCase());
             if (type == null) {
