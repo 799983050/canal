@@ -26,9 +26,9 @@ import java.util.concurrent.atomic.AtomicLong;
  * @author rewerma @ 2018-11-7
  * @version 1.0.0
  */
-public class RdbEtlService {
+public class MongodbEtlService {
 
-    private static final Logger logger = LoggerFactory.getLogger(RdbEtlService.class);
+    private static final Logger logger = LoggerFactory.getLogger(MongodbEtlService.class);
 
     /**
      * 导入数据

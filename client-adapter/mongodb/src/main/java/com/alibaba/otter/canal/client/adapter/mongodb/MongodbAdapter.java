@@ -5,22 +5,19 @@ import com.alibaba.otter.canal.client.adapter.OuterAdapter;
 import com.alibaba.otter.canal.client.adapter.mongodb.config.ConfigLoader;
 import com.alibaba.otter.canal.client.adapter.mongodb.config.MappingConfig;
 import com.alibaba.otter.canal.client.adapter.mongodb.config.MirrorDbConfig;
-import com.alibaba.otter.canal.client.adapter.mongodb.monitor.RdbConfigMonitor;
-import com.alibaba.otter.canal.client.adapter.mongodb.service.RdbEtlService;
-import com.alibaba.otter.canal.client.adapter.mongodb.service.RdbMirrorDbSyncService;
-import com.alibaba.otter.canal.client.adapter.mongodb.service.RdbSyncService;
+import com.alibaba.otter.canal.client.adapter.mongodb.monitor.MongodbConfigMonitor;
+import com.alibaba.otter.canal.client.adapter.mongodb.service.MongodbEtlService;
+import com.alibaba.otter.canal.client.adapter.mongodb.service.MongodbMirrorDbSyncService;
+import com.alibaba.otter.canal.client.adapter.mongodb.service.MongodbSyncService;
 import com.alibaba.otter.canal.client.adapter.mongodb.support.SyncUtil;
 import com.alibaba.otter.canal.client.adapter.support.*;
 import com.mongodb.*;
-import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.apache.commons.lang.BooleanUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.bson.Document;
+
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -40,19 +37,19 @@ import java.util.concurrent.Future;
  * @version 1.0.0
  */
 @SPI("mongodb")
-public class RdbAdapter implements OuterAdapter {
+public class MongodbAdapter implements OuterAdapter {
 
-    private static Logger                           logger              = LoggerFactory.getLogger(RdbAdapter.class);
+    private static Logger                           logger              = LoggerFactory.getLogger(MongodbAdapter.class);
 
     private Map<String, MappingConfig>              rdbMapping          = new ConcurrentHashMap<>();                // 文件名对应配置
     private Map<String, Map<String, MappingConfig>> mappingConfigCache  = new ConcurrentHashMap<>();                // 库名-表名对应配置
     private Map<String, MirrorDbConfig>             mirrorDbConfigCache = new ConcurrentHashMap<>();                // 镜像库配置
 
     private DruidDataSource                         dataSource;
-    private RdbSyncService rdbSyncService;
-    private RdbMirrorDbSyncService rdbMirrorDbSyncService;
+    private MongodbSyncService mongodbSyncService;
+    private MongodbMirrorDbSyncService mongodbMirrorDbSyncService;
 
-    private RdbConfigMonitor rdbConfigMonitor;
+    private MongodbConfigMonitor mongodbConfigMonitor;
 
     private MongoClient mongoClient;
 
@@ -197,18 +194,18 @@ public class RdbAdapter implements OuterAdapter {
 
         boolean skipDupException = BooleanUtils.toBoolean(configuration.getProperties()
             .getOrDefault("skipDupException", "true"));
-        rdbSyncService = new RdbSyncService(dataSource,
+        mongodbSyncService = new MongodbSyncService(dataSource,
             threads != null ? Integer.valueOf(threads) : null,
             skipDupException);
 
-        rdbMirrorDbSyncService = new RdbMirrorDbSyncService(mirrorDbConfigCache,
+        mongodbMirrorDbSyncService = new MongodbMirrorDbSyncService(mirrorDbConfigCache,
             dataSource,
             threads != null ? Integer.valueOf(threads) : null,
-            rdbSyncService.getColumnsTypeCache(),
+            mongodbSyncService.getColumnsTypeCache(),
             skipDupException);
 
-        rdbConfigMonitor = new RdbConfigMonitor();
-        rdbConfigMonitor.init(configuration.getKey(), this);
+        mongodbConfigMonitor = new MongodbConfigMonitor();
+        mongodbConfigMonitor.init(configuration.getKey(), this);
     }
     /**
      * 同步方法
@@ -220,11 +217,11 @@ public class RdbAdapter implements OuterAdapter {
         ExecutorService executorService = Executors.newFixedThreadPool(2);
 
         Future<Boolean> future1 = executorService.submit(() -> {
-            rdbSyncService.sync(mappingConfigCache, dmls);
+            mongodbSyncService.sync(mappingConfigCache, dmls);
             return true;
         });
         Future<Boolean> future2 = executorService.submit(() -> {
-            rdbMirrorDbSyncService.sync(dmls);
+            mongodbMirrorDbSyncService.sync(dmls);
             return true;
         });
         try {
@@ -249,7 +246,7 @@ public class RdbAdapter implements OuterAdapter {
         if (config != null) {
             DataSource srcDataSource = DatasourceConfig.DATA_SOURCES.get(config.getDataSourceKey());
             if (srcDataSource != null) {
-                return RdbEtlService.importData(srcDataSource, dataSource, config, params);
+                return MongodbEtlService.importData(srcDataSource, dataSource, config, params);
             } else {
                 etlResult.setSucceeded(false);
                 etlResult.setErrorMessage("DataSource not found");
@@ -266,7 +263,7 @@ public class RdbAdapter implements OuterAdapter {
                     if (srcDataSource == null) {
                         continue;
                     }
-                    EtlResult etlRes = RdbEtlService.importData(srcDataSource, dataSource, configTmp, params);
+                    EtlResult etlRes = MongodbEtlService.importData(srcDataSource, dataSource, configTmp, params);
                     if (!etlRes.getSucceeded()) {
                         resSucc = false;
                         resultMsg.append(etlRes.getErrorMessage()).append("\n");
@@ -351,11 +348,11 @@ public class RdbAdapter implements OuterAdapter {
      */
     @Override
     public void destroy() {
-        if (rdbConfigMonitor != null) {
-            rdbConfigMonitor.destroy();
+        if (mongodbConfigMonitor != null) {
+            mongodbConfigMonitor.destroy();
         }
 
-        if (rdbSyncService != null) {
+        if (mongodbSyncService != null) {
             dataSource.close();
         }
 

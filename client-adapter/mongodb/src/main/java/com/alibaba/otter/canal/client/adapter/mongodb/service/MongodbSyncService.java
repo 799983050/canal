@@ -2,7 +2,7 @@ package com.alibaba.otter.canal.client.adapter.mongodb.service;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.serializer.SerializerFeature;
-import com.alibaba.otter.canal.client.adapter.mongodb.RdbAdapter;
+import com.alibaba.otter.canal.client.adapter.mongodb.MongodbAdapter;
 import com.alibaba.otter.canal.client.adapter.mongodb.config.MappingConfig;
 import com.alibaba.otter.canal.client.adapter.mongodb.support.BatchExecutor;
 import com.alibaba.otter.canal.client.adapter.mongodb.support.SingleDml;
@@ -11,7 +11,6 @@ import com.alibaba.otter.canal.client.adapter.support.Dml;
 import com.alibaba.otter.canal.client.adapter.support.Util;
 import com.mongodb.MongoClientException;
 import com.mongodb.MongoSocketException;
-import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
@@ -21,7 +20,6 @@ import org.apache.commons.lang.StringUtils;
 import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -37,9 +35,9 @@ import java.util.function.Function;
  * @author rewerma 2018-11-7 下午06:45:49
  * @version 1.0.0
  */
-public class RdbSyncService {
+public class MongodbSyncService {
 
-    private static final Logger               logger  = LoggerFactory.getLogger(RdbSyncService.class);
+    private static final Logger               logger  = LoggerFactory.getLogger(MongodbSyncService.class);
 
     // 源库表字段类型缓存: instance.schema.table -> <columnName, jdbcType>
     private Map<String, Map<String, Integer>> columnsTypeCache;
@@ -60,13 +58,13 @@ public class RdbSyncService {
     }
 
     @SuppressWarnings("unchecked")
-    public RdbSyncService(DataSource dataSource, Integer threads, boolean skipDupException){
+    public MongodbSyncService(DataSource dataSource, Integer threads, boolean skipDupException){
         this(dataSource, threads, new ConcurrentHashMap<>(), skipDupException);
     }
 
     @SuppressWarnings("unchecked")
-    public RdbSyncService(DataSource dataSource, Integer threads, Map<String, Map<String, Integer>> columnsTypeCache,
-                          boolean skipDupException){
+    public MongodbSyncService(DataSource dataSource, Integer threads, Map<String, Map<String, Integer>> columnsTypeCache,
+                              boolean skipDupException){
         this.columnsTypeCache = columnsTypeCache;
         this.skipDupException = skipDupException;
         try {
@@ -370,7 +368,7 @@ public class RdbSyncService {
         Map<String, Integer> columnType = columnsTypeCache.get(cacheKey);
         //字段缓存为空时，为缓存赋值
         if (columnType == null) {
-            synchronized (RdbSyncService.class) {
+            synchronized (MongodbSyncService.class) {
                 columnType = columnsTypeCache.get(cacheKey);
                 //缓存为空
                 if (columnType == null) {
@@ -402,12 +400,12 @@ public class RdbSyncService {
      * 连接mongodb的客户端
      */
     public MongoCollection<Document> getCollection(String dataBase,String collection){
-        RdbAdapter rdbAdapter =null;
+        MongodbAdapter mongodbAdapter =null;
         MongoCollection<Document> collections = null;
         try {
-            rdbAdapter = new RdbAdapter();
+            mongodbAdapter = new MongodbAdapter();
             //选择mongo库
-            MongoDatabase mongoDatabase = rdbAdapter.mongoDatabase(rdbAdapter.getMongoClient(),dataBase);
+            MongoDatabase mongoDatabase = mongodbAdapter.mongoDatabase(mongodbAdapter.getMongoClient(),dataBase);
             //选择表  连接目标表
             collections = mongoDatabase.getCollection(collection);
         }catch (MongoClientException | MongoSocketException clientException){

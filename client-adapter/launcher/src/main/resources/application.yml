@@ -42,7 +42,7 @@ canal.conf:
       - name: mongodb
         key: mongodb1
         properties:
-          mongo.core.replica.set: 192.168.0.221:27014
+          mongo.core.replica.set: 192.168.0.141:27017
           mongo.core.username: zsyu
           mongo.core.password: zsyu
 #      - name: rdb

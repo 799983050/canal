@@ -24,20 +24,20 @@ import java.util.Map;
  * @author rewerma 2018-12-12 下午011:23
  * @version 1.0.0
  */
-public class RdbMirrorDbSyncService {
+public class MongodbMirrorDbSyncService {
 
-    private static final Logger         logger = LoggerFactory.getLogger(RdbMirrorDbSyncService.class);
+    private static final Logger         logger = LoggerFactory.getLogger(MongodbMirrorDbSyncService.class);
 
     private Map<String, MirrorDbConfig> mirrorDbConfigCache;                                           // 镜像库配置
     private DataSource                  dataSource;
-    private RdbSyncService              rdbSyncService;                                                // rdbSyncService代理
+    private MongodbSyncService mongodbSyncService;                                                // rdbSyncService代理
 
-    public RdbMirrorDbSyncService(Map<String, MirrorDbConfig> mirrorDbConfigCache, DataSource dataSource,
-                                  Integer threads, Map<String, Map<String, Integer>> columnsTypeCache,
-                                  boolean skipDupException){
+    public MongodbMirrorDbSyncService(Map<String, MirrorDbConfig> mirrorDbConfigCache, DataSource dataSource,
+                                      Integer threads, Map<String, Map<String, Integer>> columnsTypeCache,
+                                      boolean skipDupException){
         this.mirrorDbConfigCache = mirrorDbConfigCache;
         this.dataSource = dataSource;
-        this.rdbSyncService = new RdbSyncService(dataSource, threads, columnsTypeCache, skipDupException);
+        this.mongodbSyncService = new MongodbSyncService(dataSource, threads, columnsTypeCache, skipDupException);
     }
 
     /**
@@ -60,7 +60,7 @@ public class RdbMirrorDbSyncService {
                     logger.debug("DDL: {}", JSON.toJSONString(dml, SerializerFeature.WriteMapNullValue));
                 }
                 executeDdl(mirrorDbConfig, dml);
-                rdbSyncService.getColumnsTypeCache().remove(destination + "." + database + "." + dml.getTable());
+                mongodbSyncService.getColumnsTypeCache().remove(destination + "." + database + "." + dml.getTable());
                 mirrorDbConfig.getTableConfig().remove(dml.getTable()); // 删除对应库表配置
             } else {
                 // DML
@@ -69,7 +69,7 @@ public class RdbMirrorDbSyncService {
             }
         }
         if (!dmlList.isEmpty()) {
-            rdbSyncService.sync(dmlList,
+            mongodbSyncService.sync(dmlList,
                 dml -> {
                     MirrorDbConfig mirrorDbConfig = mirrorDbConfigCache.get(dml.getDestination() + "."
                                                                             + dml.getDatabase());
@@ -86,16 +86,16 @@ public class RdbMirrorDbSyncService {
                     if (config.getConcurrent()) {
                         List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
                         singleDmls.forEach(singleDml -> {
-                            int hash = rdbSyncService.pkHash(config.getDbMapping(), singleDml.getData());
-                            RdbSyncService.SyncItem syncItem = new RdbSyncService.SyncItem(config, singleDml);
-                            rdbSyncService.getDmlsPartition()[hash].add(syncItem);
+                            int hash = mongodbSyncService.pkHash(config.getDbMapping(), singleDml.getData());
+                            MongodbSyncService.SyncItem syncItem = new MongodbSyncService.SyncItem(config, singleDml);
+                            mongodbSyncService.getDmlsPartition()[hash].add(syncItem);
                         });
                     } else {
                         int hash = 0;
                         List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
                         singleDmls.forEach(singleDml -> {
-                            RdbSyncService.SyncItem syncItem = new RdbSyncService.SyncItem(config, singleDml);
-                            rdbSyncService.getDmlsPartition()[hash].add(syncItem);
+                            MongodbSyncService.SyncItem syncItem = new MongodbSyncService.SyncItem(config, singleDml);
+                            mongodbSyncService.getDmlsPartition()[hash].add(syncItem);
                         });
                     }
                     return true;
