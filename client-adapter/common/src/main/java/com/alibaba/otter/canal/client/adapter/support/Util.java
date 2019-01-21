@@ -27,7 +27,12 @@ public class Util {
         Statement stmt = null;
         ResultSet rs = null;
         try {
+            //创建连接
             conn = ds.getConnection();
+            /**
+             *   TYPE_FORWARD_ONLY参数只允许结果集的游标向下移动。
+             *   CONCUR_READ_ONLY不能用结果集更新数据库中的表。
+             */
             stmt = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
             stmt.setFetchSize(Integer.MIN_VALUE);
             rs = stmt.executeQuery(sql);

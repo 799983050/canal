@@ -218,10 +218,12 @@ public class RdbSyncService {
         //获取mytest_user.yml的目标表配置信息
         //如果添加mongodb的数据同步的时候，可以针对此方法修改 ，同时可以自定义配置字段
         MappingConfig.DbMapping dbMapping = config.getDbMapping();
-
+        //缓存 类型
+        getTargetColumnType(batchExecutor.getConn(), config);
         Map<String, String> columnsMap = SyncUtil.getColumnsMap(dbMapping, data);
         //获取源数据字段类型
         Document document = new Document();
+        List<Document> values = new ArrayList<>();
         MongoCollection<Document> collections = null;
         for (Map.Entry<String, String> entry : columnsMap.entrySet()) {
             //dml.getData   源字段名称
@@ -230,13 +232,14 @@ public class RdbSyncService {
             Object value = data.get(srcColumnName);
             document.put(srcColumnName,value);
         }
+        values.add(document);
         /**
          * 向mongodb做缓存同步时不需要了解对应的类型，直接存储就行
          */
         try {
             //collection   可以对mongo库进行操作 插入数据
             collections = getCollection(dbMapping.getTargetDb(),dbMapping.getTargetTable());
-            collections.insertOne(document);
+            collections.insertMany(values);
         }catch (Exception e){
             logger.info("数据插入失败:{}",e);
         }
@@ -265,7 +268,8 @@ public class RdbSyncService {
         //获取mytest_user.yml的目标表配置信息
         //如果添加mongodb的数据同步的时候，可以针对此方法修改 ，同时可以自定义配置字段
         MappingConfig.DbMapping dbMapping = config.getDbMapping();
-
+        //缓存 类型
+        getTargetColumnType(batchExecutor.getConn(), config);
         //获取mongodn目标表数据
         MongoCollection<Document> collections = null;
         Document documentNew =null;
@@ -298,7 +302,7 @@ public class RdbSyncService {
             UpdateResult updateResult = collections.updateMany(Filters.eq(pk, pkValue),new Document("$set", documentNew));
             logger.info("更新的条数为:{},更新的id是:{}",updateResult.getMatchedCount(),updateResult.getUpsertedId());
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.info("数据更新失败:{}",e);
         }
     }
 
@@ -318,7 +322,8 @@ public class RdbSyncService {
         //获取mytest_user.yml的目标表配置信息
         //如果添加mongodb的数据同步的时候，可以针对此方法修改 ，同时可以自定义配置字段
         MappingConfig.DbMapping dbMapping = config.getDbMapping();
-
+        //缓存 类型
+        getTargetColumnType(batchExecutor.getConn(), config);
         //直接删除
         //获取mongodn目标表数据
         MongoCollection<Document> collections = null;
@@ -345,10 +350,54 @@ public class RdbSyncService {
             DeleteResult deleteResult = collections.deleteMany(Filters.eq(pk, pkValue));
             logger.info("删除的条数为:{}",deleteResult.getDeletedCount());
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.info("mongodb数据删除失败:{},e");
         }
     }
 
+    /**
+     * 数据类型缓存
+     *
+     * @param conn sql connection
+     * @param config 映射配置
+     * @return 字段sqlType
+     */
+    private Map<String, Integer> getTargetColumnType(Connection conn, MappingConfig config) {
+        //获取mytest_user.yml的目标表配置信息
+        //如果添加mongodb的数据同步的时候，可以针对此方法修改 ，同时可以自定义配置字段
+        MappingConfig.DbMapping dbMapping = config.getDbMapping();
+        String cacheKey = config.getDestination() + "." + dbMapping.getDatabase() + "." + dbMapping.getTable();
+        //获取字段类型缓存的数据
+        Map<String, Integer> columnType = columnsTypeCache.get(cacheKey);
+        //字段缓存为空时，为缓存赋值
+        if (columnType == null) {
+            synchronized (RdbSyncService.class) {
+                columnType = columnsTypeCache.get(cacheKey);
+                //缓存为空
+                if (columnType == null) {
+                    columnType = new LinkedHashMap<>();
+                    final Map<String, Integer> columnTypeTmp = columnType;
+
+                    String sql = "SELECT * FROM " + SyncUtil.getDbTableName(dbMapping) + " WHERE 1=2";
+                    Util.sqlRS(conn, sql, rs -> {
+                        try {
+                            ResultSetMetaData rsd = rs.getMetaData();
+                                //总字段数量
+                            int columnCount = rsd.getColumnCount();
+                            for (int i = 1; i <= columnCount; i++) {
+                                  //绑定字段与类型
+                                columnTypeTmp.put(rsd.getColumnName(i).toLowerCase(), rsd.getColumnType(i));
+                            }
+                              //缓存存入
+                            columnsTypeCache.put(cacheKey, columnTypeTmp);
+                        } catch (SQLException e) {
+                            logger.error(e.getMessage(), e);
+                        }
+                    });
+                }
+            }
+        }
+        return columnType;
+    }
     /**
      * 连接mongodb的客户端
      */
@@ -369,7 +418,42 @@ public class RdbSyncService {
         }
         return collections;
     }
+    /**
+     * 拼接主键 where条件
+     */
+    private void appendCondition(MappingConfig.DbMapping dbMapping, StringBuilder sql, Map<String, Integer> ctype,
+                                 List<Map<String, ?>> values, Map<String, Object> d) {
+        appendCondition(dbMapping, sql, ctype, values, d, null);
+    }
 
+    private void appendCondition(MappingConfig.DbMapping dbMapping, StringBuilder sql, Map<String, Integer> ctype,
+                                 List<Map<String, ?>> values, Map<String, Object> d, Map<String, Object> o) {
+        // 拼接主键
+        for (Map.Entry<String, String> entry : dbMapping.getTargetPk().entrySet()) {
+            // 获取目标主键字段名
+            String targetColumnName = entry.getKey();
+            // 获取源主键字段名
+            String srcColumnName = entry.getValue();
+            if (srcColumnName == null) {
+                // 如果源主键字段名为空  将目标主键字段名赋给源主键
+                srcColumnName = Util.cleanColumn(targetColumnName);
+            }
+            //
+            sql.append(targetColumnName).append("=? AND ");
+            Integer type = ctype.get(Util.cleanColumn(targetColumnName).toLowerCase());
+            if (type == null) {
+                throw new RuntimeException("Target column: " + targetColumnName + " not matched");
+            }
+            // 如果有修改主键的情况
+            if (o != null && o.containsKey(srcColumnName)) {
+                BatchExecutor.setValue(values, type, o.get(srcColumnName));
+            } else {
+                BatchExecutor.setValue(values, type, d.get(srcColumnName));
+            }
+        }
+        int len = sql.length();
+        sql.delete(len - 4, len);
+    }
 
     public static class SyncItem {
 
@@ -412,4 +496,10 @@ public class RdbSyncService {
         return Math.abs(hash);
     }
 
+    public void close() {
+        for (int i = 0; i < threads; i++) {
+            batchExecutors[i].close();
+            executorThreads[i].shutdown();
+        }
+    }
 }

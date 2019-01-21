@@ -32,13 +32,19 @@ canal.conf:
     - groupId: g1
       outerAdapters:
       - name: logger
-      - name: rdb
-        key: mysql1
+#      - name: rdb
+#        key: mysql1
+#        properties:
+#          jdbc.driverClassName: com.mysql.jdbc.Driver
+#          jdbc.url: jdbc:mysql://192.168.0.141/mytest?useUnicode=true&useSSL=false
+#          jdbc.username: cuitong
+#          jdbc.password: root
+      - name: mongodb
+        key: mongodb1
         properties:
-          jdbc.driverClassName: com.mysql.jdbc.Driver
-          jdbc.url: jdbc:mysql://192.168.0.141/mytest?useUnicode=true&useSSL=false
-          jdbc.username: cuitong
-          jdbc.password: root
+          mongo.core.replica.set: 192.168.0.221:27014
+          mongo.core.username: zsyu
+          mongo.core.password: zsyu
 #      - name: rdb
 #        key: mysql2
 #        properties:
@@ -64,3 +70,5 @@ canal.conf:
 #        hosts: 127.0.0.1:9300
 #        properties:
 #          cluster.name: elasticsearch
+
+
