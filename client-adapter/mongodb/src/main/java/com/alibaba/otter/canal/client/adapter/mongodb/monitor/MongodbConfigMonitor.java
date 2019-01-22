@@ -73,7 +73,7 @@ public class MongodbConfigMonitor {
                     || (key != null && key.equals(config.getOuterAdapterKey()))) {
                     addConfigToCache(file, config);
 
-                    logger.info("Add a new rdb mapping config: {} to canal adapter", file.getName());
+                    logger.info("Add a new mongodb mapping config: {} to canal adapter", file.getName());
                 }
             } catch (Exception e) {
                 logger.error(e.getMessage(), e);
@@ -105,7 +105,7 @@ public class MongodbConfigMonitor {
                         // 不能修改outerAdapterKey
                         throw new RuntimeException("Outer adapter key not allowed modify");
                     }
-                    logger.info("Change a rdb mapping config: {} of canal adapter", file.getName());
+                    logger.info("Change a mongodb mapping config: {} of canal adapter", file.getName());
                 }
             } catch (Exception e) {
                 logger.error(e.getMessage(), e);
@@ -120,7 +120,7 @@ public class MongodbConfigMonitor {
                 if (mongodbAdapter.getRdbMapping().containsKey(file.getName())) {
                     deleteConfigFromCache(file);
 
-                    logger.info("Delete a rdb mapping config: {} of canal adapter", file.getName());
+                    logger.info("Delete a mongodb mapping config: {} of canal adapter", file.getName());
                 }
             } catch (Exception e) {
                 logger.error(e.getMessage(), e);

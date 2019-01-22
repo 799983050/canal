@@ -11,6 +11,7 @@
     <groupId>com.alibaba.otter</groupId>
     <artifactId>client-adapter.mongodb</artifactId>
     <packaging>jar</packaging>
+    <name>canal client adapter rdb module for otter ${project.version}</name>
     <properties>
         <!-- mongo -->
         <mongo.version>3.6.1</mongo.version>

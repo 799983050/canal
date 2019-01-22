@@ -26,7 +26,7 @@ public class ConfigLoader {
      */
     @SuppressWarnings("unchecked")
     public static Map<String, MappingConfig> load() {
-        logger.info("## Start loading rdb mapping config ... ");
+        logger.info("## Start loading mongodb mapping config ... ");
 
         Map<String, MappingConfig> result = new LinkedHashMap<>();
 

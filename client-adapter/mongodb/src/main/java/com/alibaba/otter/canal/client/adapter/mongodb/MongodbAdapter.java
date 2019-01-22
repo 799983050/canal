@@ -142,7 +142,7 @@ public class MongodbAdapter implements OuterAdapter {
         });
 
         if (rdbMapping.isEmpty()) {
-            throw new RuntimeException("No rdb adapter found for config key: " + configuration.getKey());
+            throw new RuntimeException("No mongodb adapter found for config key: " + configuration.getKey());
         }
 
         for (Map.Entry<String, MappingConfig> entry : rdbMapping.entrySet()) {
