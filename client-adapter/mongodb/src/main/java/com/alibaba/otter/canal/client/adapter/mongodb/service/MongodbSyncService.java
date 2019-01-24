@@ -138,12 +138,6 @@ public class MongodbSyncService {
         if (data == null || data.isEmpty()) {
             return;
         }
-        //获取旧数据列表
-        //获取数据列表
-        Map<String, Object> old = dml.getOld();
-        if (old == null || old.isEmpty()) {
-            return;
-        }
         //获取mytest_user.yml的目标表配置信息
         //如果添加mongodb的数据同步的时候，可以针对此方法修改 ，同时可以自定义配置字段
         MappingConfig.DbMapping dbMapping = config.getDbMapping();
@@ -171,14 +165,16 @@ public class MongodbSyncService {
             }
             logger.info("当前的主键为:{}",pk);
             Object pkValue = null;
-            //遍历旧数据 获取pkData and pkName
-                for (Map.Entry<String, Object> s : old.entrySet()) {
-                    if (pk.equals(s.getKey())){
-                        pkValue = s.getValue();
-                    }else {
-                        continue;
-                    }
+            Map<String, String> columnsMap = SyncUtil.getColumnsMap(dbMapping, data);
+            for (Map.Entry<String, String> mapping : columnsMap.entrySet()) {
+                if (pk.equals(mapping.getValue())){
+                    String pkName = mapping.getValue();
+                    pkValue = data.get(pkName);
+                }else {
+                    continue;
                 }
+            }
+            //遍历旧数据 获取pkData and pkName
                 logger.info("当前的主键值为:{}",pkValue);
                 //遍历新数据 获取pkData and pkName
                 for (Map.Entry<String, Object> s : data.entrySet()) {
@@ -186,7 +182,7 @@ public class MongodbSyncService {
                 }
                 //修改数据   获取_id   _id 和主键没有关系 通过mysql主键
                 UpdateResult updateResult = collections.updateMany(Filters.eq(pk, pkValue), new Document("$set", documentNew));
-                logger.info("更新的条数为:{},更新的id是:{}", updateResult.getMatchedCount(), updateResult.getUpsertedId());
+                logger.info("更新的条数为:{}", updateResult.getMatchedCount());
         } catch (Exception e) {
             logger.info("数据更新失败:{}",e);
         }
