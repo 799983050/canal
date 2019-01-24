@@ -23,6 +23,7 @@ canal.conf:
   mode: tcp # kafka rocketMQ
   srcDataSources:
     defaultDS:
+      driverClassName: com.mysql.jdbc.Driver
       url: jdbc:mysql://192.168.0.121:3306/mytest?useUnicode=true&useSSL=false
       username: cuitong
       password: root
@@ -43,16 +44,17 @@ canal.conf:
         key: mongodb1
         properties:
           mongo.core.replica.set: 192.168.0.141:27017
-          mongo.core.username: zsyu
-          mongo.core.password: zsyu
-#      - name: rdb
+          mongo.core.username: cui
+          mongo.core.password: cui
+          mongo.core.dbname: mytest
+#      - name: mongodb
 #        key: mysql2
 #        properties:
 #          jdbc.driverClassName: oracle.jdbc.OracleDriver
 #          jdbc.url: jdbc:mysql://192.168.0.126/mytest?useUnicode=true&useSSL=false
 #          jdbc.username: root
 #          jdbc.password: root
-#      - name: rdb
+#      - name: mongodb
 #        key: postgres1
 #        properties:
 #          jdbc.driverClassName: org.postgresql.Driver

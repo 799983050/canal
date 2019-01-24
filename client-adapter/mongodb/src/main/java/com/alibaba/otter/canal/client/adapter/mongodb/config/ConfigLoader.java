@@ -10,7 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * RDB表映射配置加载器
+ * mongodb表映射配置加载器
  *
  * @author rewerma 2018-11-07 下午02:41:34
  * @version 1.0.0
@@ -20,7 +20,7 @@ public class ConfigLoader {
     private static Logger logger = LoggerFactory.getLogger(ConfigLoader.class);
 
     /**
-     * 加载HBase表映射配置
+     * 加载mongodb表映射配置
      *
      * @return 配置名/配置文件名--对象
      */
@@ -30,7 +30,7 @@ public class ConfigLoader {
 
         Map<String, MappingConfig> result = new LinkedHashMap<>();
 
-        Map<String, String> configContentMap = MappingConfigsLoader.loadConfigs("rdb");
+        Map<String, String> configContentMap = MappingConfigsLoader.loadConfigs("mongodb");
         configContentMap.forEach((fileName, content) -> {
             Map configMap = new Yaml().loadAs(content, Map.class); // yml自带的对象反射不是很稳定
             JSONObject configJson = new JSONObject(configMap);
@@ -43,7 +43,7 @@ public class ConfigLoader {
             result.put(fileName, config);
         });
 
-        logger.info("## Rdb mapping config loaded");
+        logger.info("## mongodb mapping config loaded");
         return result;
     }
 }

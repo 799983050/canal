@@ -75,6 +75,7 @@ public class RdbAdapter implements OuterAdapter {
      */
     @Override
     public void init(OuterAdapterConfig configuration) {
+        //加载配置文件
         Map<String, MappingConfig> rdbMappingTmp = ConfigLoader.load();
         // 过滤不匹配的key的配置
         rdbMappingTmp.forEach((key, mappingConfig) -> {
@@ -86,7 +87,7 @@ public class RdbAdapter implements OuterAdapter {
         });
 
         if (rdbMapping.isEmpty()) {
-            throw new RuntimeException("No rdb adapter found for config key: " + configuration.getKey());
+            throw new RuntimeException("No mongodb adapter found for config key: " + configuration.getKey());
         }
 
         for (Map.Entry<String, MappingConfig> entry : rdbMapping.entrySet()) {

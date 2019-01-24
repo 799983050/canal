@@ -37,8 +37,11 @@ public class RdbEtlService {
      * 导入数据
      */
     public static EtlResult importData(DataSource srcDS, DataSource targetDS, MappingConfig config, List<String> params) {
+        //封装的一个信息类
         EtlResult etlResult = new EtlResult();
+        //AtomicLong  创建具有初始值 0 的新 AtomicLong。
         AtomicLong successCount = new AtomicLong();
+        //错误信息类
         List<String> errMsg = new ArrayList<>();
         String hbaseTable = "";
         try {
@@ -126,7 +129,13 @@ public class RdbEtlService {
         }
         return etlResult;
     }
-
+    /**
+    * @param params  条件参数
+     * @param dbMapping 配置
+     * @param ds      源数据源
+     * @param sql         SELECT * FROM " + dbMapping.getDatabase() + "."
+     *                                                   + dbMapping.getTable()
+    */
     private static void appendCondition(List<String> params, DbMapping dbMapping, DataSource ds, StringBuilder sql)
                                                                                                                    throws SQLException {
         if (params != null && params.size() == 1 && dbMapping.getEtlCondition() == null) {

@@ -22,7 +22,7 @@ public class MongodbConfigMonitor {
 
     private static final Logger   logger      = LoggerFactory.getLogger(MongodbConfigMonitor.class);
 
-    private static final String   adapterName = "mongod";
+    private static final String   adapterName = "mongodb";
 
     private String                key;
 
@@ -33,10 +33,10 @@ public class MongodbConfigMonitor {
     public void init(String key, MongodbAdapter mongodbAdapter) {
         this.key = key;
         this.mongodbAdapter = mongodbAdapter;
-        //1.获取resources下rdb文件路径
+        //1.获取resources下mongodb文件路径
         File confDir = Util.getConfDirPath(adapterName);
         try {
-            //2、对rdb下的yml文件进行监控变化
+            //2、对mongodb下的yml文件进行监控变化
             FileAlterationObserver observer = new FileAlterationObserver(confDir,
                     FileFilterUtils.and(FileFilterUtils.fileFileFilter(), FileFilterUtils.suffixFileFilter("yml")));
             FileListener listener = new FileListener();
