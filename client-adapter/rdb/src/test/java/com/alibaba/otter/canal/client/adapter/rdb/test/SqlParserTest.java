@@ -1,4 +1,4 @@
-//wpackage com.alibaba.otter.canal.client.adapter.rdb.test;
+//wpackage com.alibaba.otter.canal.client.adapter.mongodb.test;
 //
 //import com.alibaba.fastsql.sql.ast.SQLName;
 //import com.alibaba.fastsql.sql.ast.SQLStatement;
