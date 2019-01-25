@@ -9,9 +9,8 @@ dbMapping:
   targetPk:
     id: id
   mapAll: true
-#  targetColumns:
-#    id:
-#    name:
+  targetColumns:
+    username: username
 #    role_id:
 #    c_time:
 #    test1:

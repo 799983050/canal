@@ -90,10 +90,33 @@ public class MongodbSyncService {
         Document document = null;
         MongoCollection<Document> collections = null;
         MappingConfig.DbMapping dbMapping = config.getDbMapping();
-            Map<String, String> columnsMap = SyncUtil.getColumnsMap(dbMapping, data);
+        //获取不缓存的字段值
+        List<String> notCache= new ArrayList<>();
+        if (dbMapping.getTargetColumns()!=null){
+            Map<String, String> notColumns = dbMapping.getTargetColumns();
+            for (String s : notColumns.keySet()) {
+                notCache.add(s);
+            }
+        }
+        Map<String, String> columnsMap = SyncUtil.getColumnsMap(dbMapping, data);
             //获取源数据字段类型
         document = new Document();
         for (Map.Entry<String, String> entry : columnsMap.entrySet()) {
+            if (!notCache.isEmpty()){
+                for (String s : notCache) {
+                    if (entry.getValue().equals(s)){
+                        continue;
+                    }else {
+                        //dml.getData   源字段名称
+                        String srcColumnName = entry.getValue();
+                        logger.info("源字段名:{}",srcColumnName);
+                        //获取源字段对应数据
+                        Object value = data.get(srcColumnName);
+                        logger.info("源字段数据:{}",value);
+                        document.put(srcColumnName,value);
+                    }
+                }
+            }else {
                 //dml.getData   源字段名称
                 String srcColumnName = entry.getValue();
                 logger.info("源字段名:{}",srcColumnName);
@@ -101,6 +124,8 @@ public class MongodbSyncService {
                 Object value = data.get(srcColumnName);
                 logger.info("源字段数据:{}",value);
                 document.put(srcColumnName,value);
+            }
+
             }
             logger.info("document.getUsername:{}",document.get("username"));
             logger.info("document.getPassword:{}",document.get("password"));
