@@ -102,6 +102,7 @@ public class MongodbSyncService {
             //获取源数据字段类型
         document = new Document();
         for (Map.Entry<String, String> entry : columnsMap.entrySet()) {
+            //如果额外配置不为空
             if (!notCache.isEmpty()){
                 for (String s : notCache) {
                     if (entry.getValue().equals(s)){
@@ -116,7 +117,7 @@ public class MongodbSyncService {
                         document.put(srcColumnName,value);
                     }
                 }
-            }else {
+            }else{
                 //dml.getData   源字段名称
                 String srcColumnName = entry.getValue();
                 logger.info("源字段名:{}",srcColumnName);
@@ -199,11 +200,30 @@ public class MongodbSyncService {
                     continue;
                 }
             }
-            //遍历旧数据 获取pkData and pkName
+            //获取不缓存的字段值
+            List<String> notCache= new ArrayList<>();
+            if (dbMapping.getTargetColumns()!=null){
+                Map<String, String> notColumns = dbMapping.getTargetColumns();
+                for (String s : notColumns.keySet()) {
+                    notCache.add(s);
+                }
+            }
                 logger.info("当前的主键值为:{}",pkValue);
                 //遍历新数据 获取pkData and pkName
                 for (Map.Entry<String, Object> s : data.entrySet()) {
-                    documentNew.put(s.getKey(), s.getValue());
+                    logger.info("key:{},value:{}",s.getKey(),s.getValue());
+                    if (!notCache.isEmpty()){
+                        for (String s1 : notCache) {
+                            if (s.getKey().equals(s1)){
+                                continue;
+                            }else {
+                                documentNew.put(s.getKey(), s.getValue());
+                            }
+                        }
+
+                    }else {
+                        documentNew.put(s.getKey(), s.getValue());
+                    }
                 }
                 //修改数据   获取_id   _id 和主键没有关系 通过mysql主键
                 UpdateResult updateResult = collections.updateMany(Filters.eq(pk, pkValue), new Document("$set", documentNew));
