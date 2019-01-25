@@ -12,7 +12,12 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
+/**
+ *@Author cuitong
+ *@Date: 2019/1/25 11:31
+ *@Email: cuitong_sl@163.com
+ *@Description:  mongodb数据源信息
+ */
 public class MongodbTemplate {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
     private MongoClient mongoClient;

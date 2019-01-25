@@ -22,10 +22,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 /**
- * mongodb
- *
- * @author rewerma 2018-11-7 下午06:45:49
- * @version 1.0.0
+ *@Author cuitong
+ *@Date: 2019/1/25 11:30
+ *@Email: cuitong_sl@163.com
+ *@Description:  mongodb同步适配器
  */
 @SPI("mongodb")
 public class MongodbAdapter implements OuterAdapter {
