@@ -44,6 +44,13 @@
             </includes>
         </fileSet>
         <fileSet>
+            <directory>../mongodb/src/main/resources/mongodb</directory>
+            <outputDirectory>/conf/mongodb</outputDirectory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+        </fileSet>
+        <fileSet>
             <directory>../rdb/src/main/resources/</directory>
             <outputDirectory>/conf</outputDirectory>
             <excludes>
