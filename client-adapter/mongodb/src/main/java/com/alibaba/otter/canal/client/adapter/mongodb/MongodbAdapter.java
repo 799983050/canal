@@ -36,14 +36,15 @@ public class MongodbAdapter implements OuterAdapter {
     private Map<String, MappingConfig>              rdbMapping          = new ConcurrentHashMap<>();                // 文件名对应配置
     private Map<String, Map<String, MappingConfig>> mappingConfigCache  = new ConcurrentHashMap<>();                // 库名-表名对应配置
     private Map<String, MirrorDbConfig>             mirrorDbConfigCache = new ConcurrentHashMap<>();                // 镜像库配置
-
     private MongodbSyncService mongodbSyncService;
     private MongodbConfigMonitor mongodbConfigMonitor;
 
     private MongodbTemplate mongodbTemplate;
     private MongoClient mongoClient;
 
-    private int threads = 3;
+    private int threads = 2;
+    private ExecutorService executorService = Executors.newFixedThreadPool(threads);
+
     public Map<String, MappingConfig> getRdbMapping() {
         return rdbMapping;
     }
@@ -115,7 +116,6 @@ public class MongodbAdapter implements OuterAdapter {
      */
     @Override
     public void sync(List<Dml> dmls) {
-        ExecutorService executorService = Executors.newFixedThreadPool(threads);
         Future<Boolean> future1 = executorService.submit(() -> {
             if (!dmls.isEmpty()){
                 dmls.forEach(dml -> {
@@ -139,6 +139,7 @@ public class MongodbAdapter implements OuterAdapter {
         try {
             future1.get();
         } catch (Exception e) {
+            executorService.shutdown();
             throw new RuntimeException(e);
         }
 
@@ -160,17 +161,17 @@ public class MongodbAdapter implements OuterAdapter {
         String database = dml.getDatabase();
         String table = dml.getTable();
         Map<String, MappingConfig> configMap = mappingConfigCache.get(destination + "." + database + "." + table);
-        Future<Boolean> future1 = null;
+        Future<Boolean> future2 = null;
         if (configMap != null) {
-            ExecutorService executorService = Executors.newFixedThreadPool(threads);
-            future1 = executorService.submit(()->{
+            future2 = executorService.submit(()->{
                 configMap.values().forEach(config -> mongodbSyncService.sync(mongoClient,config, dml));
                 return true;
             });
         }
         try {
-            future1.get();
+            future2.get();
         } catch (Exception e) {
+            executorService.shutdown();
             throw new RuntimeException(e);
         }
 
@@ -192,6 +193,9 @@ public class MongodbAdapter implements OuterAdapter {
 
         if (mongodbTemplate != null) {
             mongodbTemplate.close();
+        }
+        if (executorService != null){
+            executorService.shutdown();
         }
     }
 }
