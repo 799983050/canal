@@ -1,6 +1,8 @@
 package com.alibaba.otter.canal.client.adapter.mongodb;
 
 import com.alibaba.druid.pool.DruidDataSource;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.alibaba.otter.canal.client.adapter.OuterAdapter;
 import com.alibaba.otter.canal.client.adapter.mongodb.config.ConfigLoader;
 import com.alibaba.otter.canal.client.adapter.mongodb.config.MappingConfig;
@@ -14,6 +16,8 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.Connection;
+import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -116,11 +120,19 @@ public class MongodbAdapter implements OuterAdapter {
         Future<Boolean> future1 = executorService.submit(() -> {
             if (!dmls.isEmpty()){
                 dmls.forEach(dml -> {
-                    List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
-                    singleDmls.forEach(dm->{
-                        sync(dm);
+                    if (dml.getData() == null && StringUtils.isNotEmpty(dml.getSql())) {
+                        // DDL
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("DDL: {}", JSON.toJSONString(dml, SerializerFeature.WriteMapNullValue));
+                        }
+                        executeDdl(dml);
+                    }else {
+                        List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
+                        singleDmls.forEach(dm->{
+                            sync(dm);
 
-                    });
+                        });
+                    }
                 });
             }
             return true;
@@ -132,6 +144,15 @@ public class MongodbAdapter implements OuterAdapter {
         }
 
     }
+    /**
+     * DDL 操作
+     *
+     * @param ddl DDL
+     */
+    private void executeDdl(Dml ddl) {
+        logger.trace("Execute DDL sql: {} for database: {}", ddl.getSql(), ddl.getDatabase());
+    }
+
     public void sync(SingleDml dml) {
         if (dml == null) {
             return;

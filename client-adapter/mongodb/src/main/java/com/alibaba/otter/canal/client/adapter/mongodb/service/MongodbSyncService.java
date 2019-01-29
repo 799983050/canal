@@ -110,27 +110,20 @@ public class MongodbSyncService {
                     }else {
                         //dml.getData   源字段名称
                         String srcColumnName = entry.getValue();
-                        logger.info("源字段名:{}",srcColumnName);
                         //获取源字段对应数据
                         Object value = data.get(srcColumnName);
-                        logger.info("源字段数据:{}",value);
                         document.put(srcColumnName,value);
                     }
                 }
             }else{
                 //dml.getData   源字段名称
                 String srcColumnName = entry.getValue();
-                logger.info("源字段名:{}",srcColumnName);
                 //获取源字段对应数据
                 Object value = data.get(srcColumnName);
-                logger.info("源字段数据:{}",value);
                 document.put(srcColumnName,value);
             }
 
             }
-            logger.info("document.getUsername:{}",document.get("username"));
-            logger.info("document.getPassword:{}",document.get("password"));
-
 
             /**
              * 向mongodb做缓存同步时不需要了解对应的类型，直接存储就行
@@ -140,8 +133,6 @@ public class MongodbSyncService {
                 String[] split = targetTable.split("\\.");
                 String database = split[0];
                 String collection = split[1];
-                logger.info("database:{}",database);
-                logger.info("collection:{}",collection);
                 //collection   可以对mongo库进行操作 插入数据
                 collections = mongodbTemplate.getCollection(database,collection);
                 collections.insertOne(document);
@@ -176,8 +167,6 @@ public class MongodbSyncService {
             String[] split = targetTable.split("\\.");
             String database = split[0];
             String collection = split[1];
-            logger.info("database:{}",database);
-            logger.info("collection:{}",collection);
             //collection   可以对mongo库进行操作 插入数据
             collections = mongodbTemplate.getCollection(database,collection);
             documentNew = new Document();
@@ -211,7 +200,6 @@ public class MongodbSyncService {
                 logger.info("当前的主键值为:{}",pkValue);
                 //遍历新数据 获取pkData and pkName
                 for (Map.Entry<String, Object> s : data.entrySet()) {
-                    logger.info("key:{},value:{}",s.getKey(),s.getValue());
                     if (!notCache.isEmpty()){
                         for (String s1 : notCache) {
                             if (s.getKey().equals(s1)){
@@ -258,8 +246,6 @@ public class MongodbSyncService {
             String[] split = targetTable.split("\\.");
             String database = split[0];
             String collection = split[1];
-            logger.info("database:{}",database);
-            logger.info("collection:{}",collection);
             //collection   可以对mongo库进行操作 插入数据
             collections = mongodbTemplate.getCollection(database,collection);
             //遍历配置主键
