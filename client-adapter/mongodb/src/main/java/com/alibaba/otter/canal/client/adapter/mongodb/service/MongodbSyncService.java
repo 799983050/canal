@@ -86,7 +86,6 @@ public class MongodbSyncService {
         if (data == null || data.isEmpty()) {
             return;
         }
-        logger.info("数据列表:{}",data);
         //获取mytest_user.yml的目标表配置信息
         //如果添加mongodb的数据同步的时候，可以针对此方法修改 ，同时可以自定义配置字段
         Document document = null;
