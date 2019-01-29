@@ -89,10 +89,10 @@ public class MongodbTemplate {
      * @param dataBase 库
      * @param collection 集合
      */
-    public MongoCollection<Document> getCollection(String dataBase,String collection){
+    public MongoCollection<Document> getCollection(MongoClient mongoClient,String dataBase,String collection){
             try {
                 //选择mongo库
-                MongoDatabase mongoDatabase = this.mongoDatabase(this.getMongoClient(),dataBase);
+                MongoDatabase mongoDatabase = this.mongoDatabase(mongoClient,dataBase);
                 //选择表  连接目标表
                 collections = mongoDatabase.getCollection(collection);
             }catch (MongoClientException | MongoSocketException clientException){

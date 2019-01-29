@@ -12,18 +12,15 @@ import com.alibaba.otter.canal.client.adapter.mongodb.monitor.MongodbConfigMonit
 import com.alibaba.otter.canal.client.adapter.mongodb.service.MongodbSyncService;
 import com.alibaba.otter.canal.client.adapter.mongodb.support.SingleDml;
 import com.alibaba.otter.canal.client.adapter.support.*;
+import com.mongodb.MongoClient;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Connection;
-import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 /**
  *@Author cuitong
@@ -44,8 +41,9 @@ public class MongodbAdapter implements OuterAdapter {
     private MongodbConfigMonitor mongodbConfigMonitor;
 
     private MongodbTemplate mongodbTemplate;
+    private MongoClient mongoClient;
 
-
+    private int threads = 3;
     public Map<String, MappingConfig> getRdbMapping() {
         return rdbMapping;
     }
@@ -102,6 +100,7 @@ public class MongodbAdapter implements OuterAdapter {
              *  初始化 mongodb  连接信息
              */
             mongodbTemplate = new MongodbTemplate(configuration);
+            mongoClient = mongodbTemplate.getMongoClient();
         } catch (Exception e) {
             logger.error("ERROR ## failed to initial mongClient: {}", e);
         }
@@ -116,7 +115,7 @@ public class MongodbAdapter implements OuterAdapter {
      */
     @Override
     public void sync(List<Dml> dmls) {
-        ExecutorService executorService = Executors.newFixedThreadPool(3);
+        ExecutorService executorService = Executors.newFixedThreadPool(threads);
         Future<Boolean> future1 = executorService.submit(() -> {
             if (!dmls.isEmpty()){
                 dmls.forEach(dml -> {
@@ -161,119 +160,22 @@ public class MongodbAdapter implements OuterAdapter {
         String database = dml.getDatabase();
         String table = dml.getTable();
         Map<String, MappingConfig> configMap = mappingConfigCache.get(destination + "." + database + "." + table);
+        Future<Boolean> future1 = null;
         if (configMap != null) {
-            configMap.values().forEach(config -> mongodbSyncService.sync(config, dml));
+            ExecutorService executorService = Executors.newFixedThreadPool(threads);
+            future1 = executorService.submit(()->{
+                configMap.values().forEach(config -> mongodbSyncService.sync(mongoClient,config, dml));
+                return true;
+            });
         }
+        try {
+            future1.get();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+
     }
-
-    /**
-     * ETL方法
-     *
-     * @param task 任务名, 对应配置名
-     * @param params etl筛选条件
-     * @return ETL结果
-     */
-//    @Override
-//    public EtlResult etl(String task, List<String> params) {
-//        EtlResult etlResult = new EtlResult();
-//        MappingConfig config = rdbMapping.get(task);
-//        if (config != null) {
-//            DataSource srcDataSource = DatasourceConfig.DATA_SOURCES.get(config.getDataSourceKey());
-//            if (srcDataSource != null) {
-//                return MongodbEtlService.importData(srcDataSource, mongodbTemplate, config, params);
-//            } else {
-//                etlResult.setSucceeded(false);
-//                etlResult.setErrorMessage("DataSource not found");
-//                return etlResult;
-//            }
-//        } else {
-//            StringBuilder resultMsg = new StringBuilder();
-//            boolean resSucc = true;
-//            // ds不为空说明传入的是destination
-//            for (MappingConfig configTmp : rdbMapping.values()) {
-//                // 取所有的destination为task的配置
-//                if (configTmp.getDestination().equals(task)) {
-//                    DataSource srcDataSource = DatasourceConfig.DATA_SOURCES.get(configTmp.getDataSourceKey());
-//                    if (srcDataSource == null) {
-//                        continue;
-//                    }
-//                    EtlResult etlRes = MongodbEtlService.importData(srcDataSource, mongodbTemplate, configTmp, params);
-//                    if (!etlRes.getSucceeded()) {
-//                        resSucc = false;
-//                        resultMsg.append(etlRes.getErrorMessage()).append("\n");
-//                    } else {
-//                        resultMsg.append(etlRes.getResultMessage()).append("\n");
-//                    }
-//                }
-//            }
-//            if (resultMsg.length() > 0) {
-//                etlResult.setSucceeded(resSucc);
-//                if (resSucc) {
-//                    etlResult.setResultMessage(resultMsg.toString());
-//                } else {
-//                    etlResult.setErrorMessage(resultMsg.toString());
-//                }
-//                return etlResult;
-//            }
-//        }
-//        etlResult.setSucceeded(false);
-//        etlResult.setErrorMessage("Task not found");
-//        return etlResult;
-//    }
-
-    /**
-     * 获取总数方法
-     *
-     * @param task 任务名, 对应配置名
-     * @return 总数
-     */
-//    @Override
-//    public Map<String, Object> count(String task) {
-//        MappingConfig config = rdbMapping.get(task);
-//        MappingConfig.DbMapping dbMapping = config.getDbMapping();
-//        //目标库
-//        String dataBase = dbMapping.getTargetDb();
-//        //目标表
-//        String collection = dbMapping.getTargetTable();
-//        MongoCollection<Document> collections;
-//        Map<String, Object> res = new LinkedHashMap<>();
-//        long count = 0L;
-//        try {
-//            //连接库信息
-//            collections = mongodbTemplate.getCollection(dataBase,collection);
-//            count = collections.count();
-//            // 获取插入总数
-//        } catch (Exception e) {
-//            logger.error(e.getMessage(), e);
-//        } finally {
-//            if (mongodbTemplate.getMongoClient() != null) {
-//                try {
-//                    //关闭连接
-//                    mongodbTemplate.close();
-//                } catch (Exception e) {
-//                    logger.error(e.getMessage(), e);
-//                }
-//            }
-//        }
-//        res.put("targetTable", SyncUtil.getDbTableName(dbMapping));
-//        res.put("count",count);
-//        return res;
-//    }
-
-    /**
-     * 获取对应canal instance name 或 mq topic
-     *
-     * @param task 任务名, 对应配置名
-     * @return destination
-     */
-//    @Override
-//    public String getDestination(String task) {
-//        MappingConfig config = rdbMapping.get(task);
-//        if (config != null) {
-//            return config.getDestination();
-//        }
-//        return null;
-//    }
 
     /**
      * 销毁方法

@@ -10,6 +10,7 @@ import com.alibaba.otter.canal.client.adapter.mongodb.support.SingleDml;
 import com.alibaba.otter.canal.client.adapter.mongodb.support.SyncUtil;
 import com.alibaba.otter.canal.client.adapter.support.Dml;
 import com.alibaba.otter.canal.client.adapter.support.Util;
+import com.mongodb.MongoClient;
 import com.mongodb.MongoClientException;
 import com.mongodb.MongoSocketException;
 import com.mongodb.client.MongoCollection;
@@ -53,16 +54,16 @@ public class MongodbSyncService {
      * @param config 对应配置对象
      * @param dml DML
      */
-    public void sync(MappingConfig config, SingleDml dml) {
+    public void sync(MongoClient mongoClient, MappingConfig config, SingleDml dml) {
         if (config != null) {
             try {
                 String type = dml.getType();
                 if (type != null && type.equalsIgnoreCase("INSERT")) {
-                    insert(config, dml);
+                    insert(mongoClient,config, dml);
                 } else if (type != null && type.equalsIgnoreCase("UPDATE")) {
-                    update(config, dml);
+                    update(mongoClient,config, dml);
                 } else if (type != null && type.equalsIgnoreCase("DELETE")) {
-                    delete(config, dml);
+                    delete(mongoClient,config, dml);
                 }
                 if (logger.isDebugEnabled()) {
                     logger.debug("DML: {}", JSON.toJSONString(dml, SerializerFeature.WriteMapNullValue));
@@ -79,7 +80,7 @@ public class MongodbSyncService {
      * @param config 配置项
      * @param dml DML数据
      */
-    private void insert(MappingConfig config, SingleDml dml){
+    private void insert(MongoClient mongoClient,MappingConfig config, SingleDml dml){
         //获取数据列表
         Map<String, Object> data = dml.getData();
         if (data == null || data.isEmpty()) {
@@ -134,7 +135,7 @@ public class MongodbSyncService {
                 String database = split[0];
                 String collection = split[1];
                 //collection   可以对mongo库进行操作 插入数据
-                collections = mongodbTemplate.getCollection(database,collection);
+                collections = mongodbTemplate.getCollection(mongoClient,database,collection);
                 collections.insertOne(document);
             }catch (Exception e){
                 logger.info("数据插入失败:{}",e);
@@ -149,7 +150,7 @@ public class MongodbSyncService {
      *
      *    update  table   set  targetColumnName = ?  WHERE  targetColumnName = ?;
      */
-    private void update( MappingConfig config, SingleDml dml) {
+    private void update( MongoClient mongoClient,MappingConfig config, SingleDml dml) {
         //获取数据列表
         Map<String, Object> data = dml.getData();
         if (data == null || data.isEmpty()) {
@@ -168,7 +169,7 @@ public class MongodbSyncService {
             String database = split[0];
             String collection = split[1];
             //collection   可以对mongo库进行操作 插入数据
-            collections = mongodbTemplate.getCollection(database,collection);
+            collections = mongodbTemplate.getCollection(mongoClient,database,collection);
             documentNew = new Document();
             //遍历配置主键
             //获取主键
@@ -227,7 +228,7 @@ public class MongodbSyncService {
      * @param config
      * @param dml
      */
-    private void delete( MappingConfig config, SingleDml dml) throws SQLException {
+    private void delete( MongoClient mongoClient,MappingConfig config, SingleDml dml) throws SQLException {
         //获取数据列表
         Map<String, Object> data = dml.getData();
         if (data == null || data.isEmpty()) {
@@ -247,7 +248,7 @@ public class MongodbSyncService {
             String database = split[0];
             String collection = split[1];
             //collection   可以对mongo库进行操作 插入数据
-            collections = mongodbTemplate.getCollection(database,collection);
+            collections = mongodbTemplate.getCollection(mongoClient,database,collection);
             //遍历配置主键
             //获取主键
             String pk = null;
@@ -268,7 +269,7 @@ public class MongodbSyncService {
             DeleteResult deleteResult = collections.deleteMany(Filters.eq(pk, pkValue));
             logger.info("删除的条数为:{}",deleteResult.getDeletedCount());
         } catch (Exception e) {
-            logger.info("mongodb数据删除失败:{},e");
+            logger.info("mongodb数据删除失败:{}",e);
         }
     }
 
