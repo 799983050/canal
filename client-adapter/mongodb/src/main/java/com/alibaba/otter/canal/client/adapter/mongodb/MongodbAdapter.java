@@ -42,8 +42,7 @@ public class MongodbAdapter implements OuterAdapter {
     private MongodbTemplate mongodbTemplate;
     private MongoClient mongoClient;
 
-    private int threads = 2;
-    private ExecutorService executorService = Executors.newFixedThreadPool(threads);
+    private ExecutorService executorService = Executors.newFixedThreadPool(1);
 
     public Map<String, MappingConfig> getRdbMapping() {
         return rdbMapping;
@@ -128,7 +127,7 @@ public class MongodbAdapter implements OuterAdapter {
                     }else {
                         List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
                         singleDmls.forEach(dm->{
-                            sync(dm);
+                            mongodbSyncService.sync(mongoClient,mappingConfigCache,dm);
 
                         });
                     }
@@ -153,30 +152,30 @@ public class MongodbAdapter implements OuterAdapter {
         logger.trace("Execute DDL sql: {} for database: {}", ddl.getSql(), ddl.getDatabase());
     }
 
-    public void sync(SingleDml dml) {
-        if (dml == null) {
-            return;
-        }
-        String destination = StringUtils.trimToEmpty(dml.getDestination());
-        String database = dml.getDatabase();
-        String table = dml.getTable();
-        Map<String, MappingConfig> configMap = mappingConfigCache.get(destination + "." + database + "." + table);
-        Future<Boolean> future2 = null;
-        if (configMap != null) {
-            future2 = executorService.submit(()->{
-                configMap.values().forEach(config -> mongodbSyncService.sync(mongoClient,config, dml));
-                return true;
-            });
-        }
-        try {
-            future2.get();
-        } catch (Exception e) {
-            executorService.shutdown();
-            throw new RuntimeException(e);
-        }
-
-
-    }
+//    public void sync(SingleDml dml) {
+//        if (dml == null) {
+//            return;
+//        }
+//        String destination = StringUtils.trimToEmpty(dml.getDestination());
+//        String database = dml.getDatabase();
+//        String table = dml.getTable();
+//        Map<String, MappingConfig> configMap = mappingConfigCache.get(destination + "." + database + "." + table);
+//        Future<Boolean> future2 = null;
+//        if (configMap != null) {
+//            future2 = executorService.submit(()->{
+//                configMap.values().forEach(config -> mongodbSyncService.sync(mongoClient,config, dml));
+//                return true;
+//            });
+//        }
+//        try {
+//            future2.get();
+//        } catch (Exception e) {
+//            executorService.shutdown();
+//            throw new RuntimeException(e);
+//        }
+//
+//
+//    }
 
     /**
      * 销毁方法
@@ -193,9 +192,6 @@ public class MongodbAdapter implements OuterAdapter {
 
         if (mongodbTemplate != null) {
             mongodbTemplate.close();
-        }
-        if (executorService != null){
-            executorService.shutdown();
         }
     }
 }

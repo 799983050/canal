@@ -40,13 +40,45 @@ import java.util.function.Function;
 public class MongodbSyncService {
 
     private static final Logger               logger  = LoggerFactory.getLogger(MongodbSyncService.class);
-
+    private int                               threads = 1;
+    private ExecutorService[]                 executorThreads;
     private MongodbTemplate mongodbTemplate;
     public MongodbSyncService(MongodbTemplate mongodbTemplate){
         this.mongodbTemplate = mongodbTemplate;
+        this.executorThreads = new ExecutorService[this.threads];
+        for (int i = 0; i < this.threads; i++) {
+            executorThreads[i] = Executors.newSingleThreadExecutor();
+        }
     }
 
+    public void sync(MongoClient mongoClient,Map<String, Map<String, MappingConfig>> mappingConfigCache,SingleDml dml) {
+        if (dml == null) {
+            return;
+        }
+        String destination = StringUtils.trimToEmpty(dml.getDestination());
+        String database = dml.getDatabase();
+        String table = dml.getTable();
+        Map<String, MappingConfig> configMap = mappingConfigCache.get(destination + "." + database + "." + table);
+        Future<Boolean> future2 = null;
+        if (configMap != null) {
+            for (ExecutorService thread : executorThreads) {
+                future2 = thread.submit(()->{
+                    configMap.values().forEach(config -> sync(mongoClient,config, dml));
+                    return true;
+                });
+            }
+        }
+        try {
+            future2.get();
+        } catch (Exception e) {
+            for (int i = 0; i < this.threads; i++) {
+                executorThreads[i].shutdown();
+            }
+            throw new RuntimeException(e);
+        }
 
+
+    }
     /**
      * 单条 dml 同步
      *
@@ -86,6 +118,7 @@ public class MongodbSyncService {
         if (data == null || data.isEmpty()) {
             return;
         }
+        logger.info("同步的DML  data:{}",data);
         //获取mytest_user.yml的目标表配置信息
         //如果添加mongodb的数据同步的时候，可以针对此方法修改 ，同时可以自定义配置字段
         Document document = null;
