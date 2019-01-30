@@ -10,14 +10,12 @@ import com.alibaba.otter.canal.client.adapter.mongodb.config.MirrorDbConfig;
 import com.alibaba.otter.canal.client.adapter.mongodb.config.MongodbTemplate;
 import com.alibaba.otter.canal.client.adapter.mongodb.monitor.MongodbConfigMonitor;
 import com.alibaba.otter.canal.client.adapter.mongodb.service.MongodbSyncService;
-import com.alibaba.otter.canal.client.adapter.mongodb.support.SingleDml;
 import com.alibaba.otter.canal.client.adapter.support.*;
 import com.mongodb.MongoClient;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -40,7 +38,6 @@ public class MongodbAdapter implements OuterAdapter {
     private MongodbConfigMonitor mongodbConfigMonitor;
 
     private MongodbTemplate mongodbTemplate;
-    private MongoClient mongoClient;
 
     private ExecutorService executorService = Executors.newFixedThreadPool(1);
 
@@ -94,17 +91,16 @@ public class MongodbAdapter implements OuterAdapter {
                 mirrorDbConfigCache.put(key, MirrorDbConfig.create(configName, mappingConfig));
             }
         }
-
+        String threads = configuration.getProperties().get("threads");
         try {
             /**
              *  初始化 mongodb  连接信息
              */
             mongodbTemplate = new MongodbTemplate(configuration);
-            mongoClient = mongodbTemplate.getMongoClient();
         } catch (Exception e) {
             logger.error("ERROR ## failed to initial mongClient: {}", e);
         }
-        mongodbSyncService = new MongodbSyncService(mongoClient,null,mongodbTemplate);
+        mongodbSyncService = new MongodbSyncService(threads != null ? Integer.valueOf(threads) : null,mongodbTemplate);
         mongodbConfigMonitor = new MongodbConfigMonitor();
         mongodbConfigMonitor.init(configuration.getKey(), this);
     }
@@ -116,6 +112,7 @@ public class MongodbAdapter implements OuterAdapter {
     @Override
     public void sync(List<Dml> dmls) {
         Future<Boolean> future1 = executorService.submit(() -> {
+            logger.info("第几次了!!~~~");
             mongodbSyncService.batchSync(mappingConfigCache,dmls);
             return true;
         });

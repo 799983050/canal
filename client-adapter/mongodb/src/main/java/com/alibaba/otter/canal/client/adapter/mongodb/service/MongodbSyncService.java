@@ -45,18 +45,18 @@ public class MongodbSyncService {
     private List<SyncItem>[]                  dmlsPartition;
     private BatchExecutor[]                   batchExecutors;
     private MongodbTemplate mongodbTemplate;
-    public MongodbSyncService(MongoClient mongoClient,Integer threads,MongodbTemplate mongodbTemplate){
+    public MongodbSyncService(Integer threads,MongodbTemplate mongodbTemplate){
+        this.mongodbTemplate = mongodbTemplate;
         try {
             if (threads != null) {
                 this.threads = threads;
             }
             this.dmlsPartition = new List[this.threads];
-            this.mongodbTemplate = mongodbTemplate;
             this.executorThreads = new ExecutorService[this.threads];
             this.batchExecutors = new BatchExecutor[this.threads];
             for (int i = 0; i < this.threads; i++) {
                 dmlsPartition[i] = new ArrayList<>();
-                batchExecutors[i] = new BatchExecutor(mongoClient);
+                batchExecutors[i] = new BatchExecutor(mongodbTemplate.getMongoClient());
                 executorThreads[i] = Executors.newSingleThreadExecutor();
             }
         } catch (SQLException e) {
@@ -175,6 +175,7 @@ public class MongodbSyncService {
             try {
                 String type = dml.getType();
                 if (type != null && type.equalsIgnoreCase("INSERT")) {
+                    logger.info("方法调用了~~~~~~");
                     insert(batchExecutor,config, dml);
                 } else if (type != null && type.equalsIgnoreCase("UPDATE")) {
                     update(batchExecutor,config, dml);
