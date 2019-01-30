@@ -332,7 +332,6 @@ public class MongodbSyncService {
                 }
                 //修改数据   获取_id   _id 和主键没有关系 通过mysql主键
                 UpdateResult updateResult = collections.updateMany(Filters.eq(pk, pkValue), new Document("$set", documentNew));
-                logger.info("更新的条数为:{}", updateResult.getMatchedCount());
         } catch (Exception e) {
             logger.info("数据更新失败:{}",e);
         }
@@ -383,7 +382,6 @@ public class MongodbSyncService {
                     }
                 }
             DeleteResult deleteResult = collections.deleteMany(Filters.eq(pk, pkValue));
-            logger.info("删除的条数为:{}",deleteResult.getDeletedCount());
         } catch (Exception e) {
             logger.info("mongodb数据删除失败:{}",e);
         }

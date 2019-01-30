@@ -1,7 +1,7 @@
 dataSourceKey: defaultDS
 destination: example
 outerAdapterKey: mongodb1
-concurrent: true
+concurrent: false
 dbMapping:
   database: mytest
   table: user
