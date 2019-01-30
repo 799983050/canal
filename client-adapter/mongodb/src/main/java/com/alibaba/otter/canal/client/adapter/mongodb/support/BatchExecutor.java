@@ -1,5 +1,6 @@
 package com.alibaba.otter.canal.client.adapter.mongodb.support;
 
+import com.mongodb.MongoClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,67 +15,28 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class BatchExecutor implements Closeable {
 
-    private static final Logger logger = LoggerFactory.getLogger(BatchExecutor.class);
+    private MongoClient mongoClient;
 
-    private Connection          conn;
-    private AtomicInteger       idx    = new AtomicInteger(0);
-
-    public BatchExecutor(Connection conn) throws SQLException{
-        this.conn = conn;
-        this.conn.setAutoCommit(false);
+    public BatchExecutor(MongoClient mongoClient) throws SQLException{
+        this.mongoClient = mongoClient;
     }
 
-    public Connection getConn() {
-        return conn;
+    public MongoClient getMongoClient() {
+        return mongoClient;
     }
 
-    public static void setValue(List<Map<String, ?>> values, int type, Object value) {
-        Map<String, Object> valueItem = new HashMap<>();
-        valueItem.put("type", type);
-        valueItem.put("value", value);
-        values.add(valueItem);
-    }
-
-    public void execute(String sql, List<Map<String, ?>> values) throws SQLException {
-        PreparedStatement pstmt = conn.prepareStatement(sql);
-        int len = values.size();
-        for (int i = 0; i < len; i++) {
-            //获取类型
-            int type = (Integer) values.get(i).get("type");
-            //获取数据
-            Object value = values.get(i).get("value");
-            //进行同步
-            SyncUtil.setPStmt(type, pstmt, value, i + 1);
-        }
-
-        pstmt.execute();
-        idx.incrementAndGet();
-    }
-
-    public void commit() throws SQLException {
-        conn.commit();
-        if (logger.isTraceEnabled()) {
-            logger.trace("Batch executor commit " + idx.get() + " rows");
-        }
-        idx.set(0);
-    }
-
-    public void rollback() throws SQLException {
-        conn.rollback();
-        if (logger.isTraceEnabled()) {
-            logger.trace("Batch executor rollback " + idx.get() + " rows");
-        }
-        idx.set(0);
+    public void setMongoClient(MongoClient mongoClient) {
+        this.mongoClient = mongoClient;
     }
 
     @Override
     public void close() {
-        if (conn != null) {
+        if (mongoClient != null) {
             try {
-                if (conn != null) {
-                    conn.close();
+                if (mongoClient != null) {
+                    mongoClient.close();
                 }
-            } catch (SQLException ioe) {
+            } catch (Exception e) {
             }
         }
     }

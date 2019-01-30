@@ -104,7 +104,7 @@ public class MongodbAdapter implements OuterAdapter {
         } catch (Exception e) {
             logger.error("ERROR ## failed to initial mongClient: {}", e);
         }
-        mongodbSyncService = new MongodbSyncService(mongodbTemplate);
+        mongodbSyncService = new MongodbSyncService(mongoClient,null,mongodbTemplate);
         mongodbConfigMonitor = new MongodbConfigMonitor();
         mongodbConfigMonitor.init(configuration.getKey(), this);
     }
@@ -116,23 +116,7 @@ public class MongodbAdapter implements OuterAdapter {
     @Override
     public void sync(List<Dml> dmls) {
         Future<Boolean> future1 = executorService.submit(() -> {
-            if (!dmls.isEmpty()){
-                dmls.forEach(dml -> {
-                    if (dml.getData() == null && StringUtils.isNotEmpty(dml.getSql())) {
-                        // DDL
-                        if (logger.isDebugEnabled()) {
-                            logger.debug("DDL: {}", JSON.toJSONString(dml, SerializerFeature.WriteMapNullValue));
-                        }
-                        executeDdl(dml);
-                    }else {
-                        List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
-                        singleDmls.forEach(dm->{
-                            mongodbSyncService.sync(mongoClient,mappingConfigCache,dm);
-
-                        });
-                    }
-                });
-            }
+            mongodbSyncService.batchSync(mappingConfigCache,dmls);
             return true;
         });
         try {
@@ -143,39 +127,8 @@ public class MongodbAdapter implements OuterAdapter {
         }
 
     }
-    /**
-     * DDL 操作
-     *
-     * @param ddl DDL
-     */
-    private void executeDdl(Dml ddl) {
-        logger.trace("Execute DDL sql: {} for database: {}", ddl.getSql(), ddl.getDatabase());
-    }
 
-//    public void sync(SingleDml dml) {
-//        if (dml == null) {
-//            return;
-//        }
-//        String destination = StringUtils.trimToEmpty(dml.getDestination());
-//        String database = dml.getDatabase();
-//        String table = dml.getTable();
-//        Map<String, MappingConfig> configMap = mappingConfigCache.get(destination + "." + database + "." + table);
-//        Future<Boolean> future2 = null;
-//        if (configMap != null) {
-//            future2 = executorService.submit(()->{
-//                configMap.values().forEach(config -> mongodbSyncService.sync(mongoClient,config, dml));
-//                return true;
-//            });
-//        }
-//        try {
-//            future2.get();
-//        } catch (Exception e) {
-//            executorService.shutdown();
-//            throw new RuntimeException(e);
-//        }
-//
-//
-//    }
+
 
     /**
      * 销毁方法
@@ -187,11 +140,11 @@ public class MongodbAdapter implements OuterAdapter {
         }
 
         if (mongodbSyncService != null) {
-            mongodbTemplate.close();
+            mongodbSyncService.close();
         }
 
-        if (mongodbTemplate != null) {
-            mongodbTemplate.close();
+        if (executorService!=null){
+            executorService.shutdown();
         }
     }
 }

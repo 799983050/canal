@@ -78,7 +78,6 @@ public class RdbSyncService {
             for (int i = 0; i < this.threads; i++) {
                 dmlsPartition[i] = new ArrayList<>();
                 batchExecutors[i] = new BatchExecutor(dataSource.getConnection());
-                //创建三个单例线程  串行执行下面的任务
                 executorThreads[i] = Executors.newSingleThreadExecutor();
             }
         } catch (SQLException e) {
@@ -108,6 +107,7 @@ public class RdbSyncService {
                 int j = i;
                 futures.add(executorThreads[i].submit(() -> {
                     try {
+                        //创建单例线程池的作用是为了 以下方法串行执行
                         dmlsPartition[j].forEach(syncItem -> sync(batchExecutors[j],
                             syncItem.config,
                             syncItem.singleDml));
@@ -157,6 +157,7 @@ public class RdbSyncService {
             boolean executed = false;
             for (MappingConfig config : configMap.values()) {
                 if (config.getConcurrent()) {
+                    //封装提取原始binlog的DML
                     List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
                     singleDmls.forEach(singleDml -> {
                         int hash = pkHash(config.getDbMapping(), singleDml.getData());
@@ -165,6 +166,7 @@ public class RdbSyncService {
                     });
                 } else {
                     int hash = 0;
+                    //对  dml数据进行再封装
                     List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
                     singleDmls.forEach(singleDml -> {
                         SyncItem syncItem = new SyncItem(config, singleDml);

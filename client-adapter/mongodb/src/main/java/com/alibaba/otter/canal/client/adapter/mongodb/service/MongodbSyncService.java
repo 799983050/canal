@@ -40,41 +40,128 @@ import java.util.function.Function;
 public class MongodbSyncService {
 
     private static final Logger               logger  = LoggerFactory.getLogger(MongodbSyncService.class);
-    private int                               threads = 1;
+    private int                               threads = 3;
     private ExecutorService[]                 executorThreads;
+    private List<SyncItem>[]                  dmlsPartition;
+    private BatchExecutor[]                   batchExecutors;
     private MongodbTemplate mongodbTemplate;
-    public MongodbSyncService(MongodbTemplate mongodbTemplate){
-        this.mongodbTemplate = mongodbTemplate;
-        this.executorThreads = new ExecutorService[this.threads];
-        for (int i = 0; i < this.threads; i++) {
-            executorThreads[i] = Executors.newSingleThreadExecutor();
+    public MongodbSyncService(MongoClient mongoClient,Integer threads,MongodbTemplate mongodbTemplate){
+        try {
+            if (threads != null) {
+                this.threads = threads;
+            }
+            this.dmlsPartition = new List[this.threads];
+            this.mongodbTemplate = mongodbTemplate;
+            this.executorThreads = new ExecutorService[this.threads];
+            this.batchExecutors = new BatchExecutor[this.threads];
+            for (int i = 0; i < this.threads; i++) {
+                dmlsPartition[i] = new ArrayList<>();
+                batchExecutors[i] = new BatchExecutor(mongoClient);
+                executorThreads[i] = Executors.newSingleThreadExecutor();
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+    /**
+     * 批量同步回调
+     *
+     * @param dmls 批量 DML
+     * @param function 回调方法
+     */
+    public void sync(List<Dml> dmls, Function<Dml, Boolean> function) {
+        boolean toExecute = false;
+        for (Dml dml : dmls) {
+            if (!toExecute) {
+                //函数 获取对应的value
+                toExecute = function.apply(dml);
+            } else {
+                function.apply(dml);
+            }
+        }
+        if (toExecute) {
+            List<Future> futures = new ArrayList<>();
+            for (int i = 0; i < threads; i++) {
+                int j = i;
+                futures.add(executorThreads[i].submit(() -> {
+                    try {
+                        //创建单例线程池的作用是为了 以下方法串行执行
+                        dmlsPartition[j].forEach(syncItem -> sync(batchExecutors[j],
+                                syncItem.config,
+                                syncItem.singleDml));
+                        dmlsPartition[j].clear();
+                        return true;
+                    } catch (Throwable e) {
+                        throw new RuntimeException(e);
+                    }
+                }));
+            }
+
+            futures.forEach(future -> {
+                try {
+                    future.get();
+                } catch (ExecutionException | InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            });
         }
     }
 
-    public void sync(MongoClient mongoClient,Map<String, Map<String, MappingConfig>> mappingConfigCache,SingleDml dml) {
-        if (dml == null) {
-            return;
-        }
-        String destination = StringUtils.trimToEmpty(dml.getDestination());
-        String database = dml.getDatabase();
-        String table = dml.getTable();
-        Map<String, MappingConfig> configMap = mappingConfigCache.get(destination + "." + database + "." + table);
-        List<Future> futures = new ArrayList<>();
-        if (configMap != null) {
-            for (int i = 0; i < threads; i++) {
-                futures.add ( executorThreads[i].submit(()->{
-                    configMap.values().forEach(config -> sync(mongoClient,config, dml));
-                    return true;
-                }));
-            }
-        }
-        futures.forEach(future -> {
-            try {
-                future.get();
-            } catch (ExecutionException | InterruptedException e) {
-                throw new RuntimeException(e);
+    /**
+     * 批量同步
+     */
+    public void batchSync(Map<String, Map<String, MappingConfig>> mappingConfigCache,List<Dml> dmls){
+        sync(dmls, dml -> {
+            if (dml.getData() == null && StringUtils.isNotEmpty(dml.getSql())) {
+                        // DDL
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("DDL: {}", JSON.toJSONString(dml, SerializerFeature.WriteMapNullValue));
+                        }
+                        executeDdl(dml);
+                        return false;
+            }else {
+                // DML
+                String destination = StringUtils.trimToEmpty(dml.getDestination());
+                String database = dml.getDatabase();
+                String table = dml.getTable();
+                Map<String, MappingConfig> configMap = mappingConfigCache.get(destination + "." + database + "." + table);
+
+                if (configMap == null) {
+                    return false;
+                }
+                boolean executed = false;
+                for (MappingConfig config : configMap.values()) {
+                    if (config.getConcurrent()) {
+                        //封装提取原始binlog的DML
+                        List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
+                        singleDmls.forEach(singleDml -> {
+                            int hash = pkHash(config.getDbMapping(), singleDml.getData());
+                            SyncItem syncItem = new SyncItem(config, singleDml);
+                            dmlsPartition[hash].add(syncItem);
+                        });
+                    } else {
+                        int hash = 0;
+                        //对  dml数据进行再封装
+                        List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
+                        singleDmls.forEach(singleDml -> {
+                            SyncItem syncItem = new SyncItem(config, singleDml);
+                            dmlsPartition[hash].add(syncItem);
+                        });
+                    }
+                    executed = true;
+                }
+                return executed;
             }
         });
+    }
+    /**
+     * DDL 操作
+     *
+     * @param ddl DDL
+     */
+    private void executeDdl(Dml ddl) {
+        logger.trace("Execute DDL sql: {}, for database: {}", ddl.getSql(), ddl.getDatabase());
     }
     /**
      * 单条 dml 同步
@@ -83,16 +170,16 @@ public class MongodbSyncService {
      * @param config 对应配置对象
      * @param dml DML
      */
-    public void sync(MongoClient mongoClient, MappingConfig config, SingleDml dml) {
+    public void sync(BatchExecutor batchExecutor, MappingConfig config, SingleDml dml) {
         if (config != null) {
             try {
                 String type = dml.getType();
                 if (type != null && type.equalsIgnoreCase("INSERT")) {
-                    insert(mongoClient,config, dml);
+                    insert(batchExecutor,config, dml);
                 } else if (type != null && type.equalsIgnoreCase("UPDATE")) {
-                    update(mongoClient,config, dml);
+                    update(batchExecutor,config, dml);
                 } else if (type != null && type.equalsIgnoreCase("DELETE")) {
-                    delete(mongoClient,config, dml);
+                    delete(batchExecutor,config, dml);
                 }
                 if (logger.isDebugEnabled()) {
                     logger.debug("DML: {}", JSON.toJSONString(dml, SerializerFeature.WriteMapNullValue));
@@ -109,7 +196,7 @@ public class MongodbSyncService {
      * @param config 配置项
      * @param dml DML数据
      */
-    private void insert(MongoClient mongoClient,MappingConfig config, SingleDml dml){
+    private void insert(BatchExecutor batchExecutor,MappingConfig config, SingleDml dml){
         //获取数据列表
         Map<String, Object> data = dml.getData();
         if (data == null || data.isEmpty()) {
@@ -164,7 +251,7 @@ public class MongodbSyncService {
                 String database = split[0];
                 String collection = split[1];
                 //collection   可以对mongo库进行操作 插入数据
-                collections = mongodbTemplate.getCollection(mongoClient,database,collection);
+                collections = mongodbTemplate.getCollection(batchExecutor.getMongoClient(),database,collection);
                 collections.insertOne(document);
             }catch (Exception e){
                 logger.info("数据插入失败:{}",e);
@@ -179,7 +266,7 @@ public class MongodbSyncService {
      *
      *    update  table   set  targetColumnName = ?  WHERE  targetColumnName = ?;
      */
-    private void update( MongoClient mongoClient,MappingConfig config, SingleDml dml) {
+    private void update( BatchExecutor batchExecutor,MappingConfig config, SingleDml dml) {
         //获取数据列表
         Map<String, Object> data = dml.getData();
         if (data == null || data.isEmpty()) {
@@ -198,7 +285,7 @@ public class MongodbSyncService {
             String database = split[0];
             String collection = split[1];
             //collection   可以对mongo库进行操作 插入数据
-            collections = mongodbTemplate.getCollection(mongoClient,database,collection);
+            collections = mongodbTemplate.getCollection(batchExecutor.getMongoClient(),database,collection);
             documentNew = new Document();
             //遍历配置主键
             //获取主键
@@ -257,7 +344,7 @@ public class MongodbSyncService {
      * @param config
      * @param dml
      */
-    private void delete( MongoClient mongoClient,MappingConfig config, SingleDml dml) throws SQLException {
+    private void delete( BatchExecutor batchExecutor,MappingConfig config, SingleDml dml) throws SQLException {
         //获取数据列表
         Map<String, Object> data = dml.getData();
         if (data == null || data.isEmpty()) {
@@ -277,7 +364,7 @@ public class MongodbSyncService {
             String database = split[0];
             String collection = split[1];
             //collection   可以对mongo库进行操作 插入数据
-            collections = mongodbTemplate.getCollection(mongoClient,database,collection);
+            collections = mongodbTemplate.getCollection(batchExecutor.getMongoClient(),database,collection);
             //遍历配置主键
             //获取主键
             String pk = null;
@@ -301,5 +388,50 @@ public class MongodbSyncService {
             logger.info("mongodb数据删除失败:{}",e);
         }
     }
+    public static class SyncItem {
 
+        private MappingConfig config;
+        private SingleDml     singleDml;
+
+        public SyncItem(MappingConfig config, SingleDml singleDml){
+            this.config = config;
+            this.singleDml = singleDml;
+        }
+    }
+
+    /**
+     * 取主键hash
+     */
+    public int pkHash(MappingConfig.DbMapping dbMapping, Map<String, Object> d) {
+        return pkHash(dbMapping, d, null);
+    }
+
+    public int pkHash(MappingConfig.DbMapping dbMapping, Map<String, Object> d, Map<String, Object> o) {
+        int hash = 0;
+        // 取主键
+        for (Map.Entry<String, String> entry : dbMapping.getTargetPk().entrySet()) {
+            String targetColumnName = entry.getKey();
+            String srcColumnName = entry.getValue();
+            if (srcColumnName == null) {
+                srcColumnName = Util.cleanColumn(targetColumnName);
+            }
+            Object value;
+            if (o != null && o.containsKey(srcColumnName)) {
+                value = o.get(srcColumnName);
+            } else {
+                value = d.get(srcColumnName);
+            }
+            if (value != null) {
+                hash += value.hashCode();
+            }
+        }
+        hash = Math.abs(hash) % threads;
+        return Math.abs(hash);
+    }
+    public void close() {
+        for (int i = 0; i < threads; i++) {
+            batchExecutors[i].close();
+            executorThreads[i].shutdown();
+        }
+    }
 }
