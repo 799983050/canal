@@ -59,25 +59,22 @@ public class MongodbSyncService {
         String database = dml.getDatabase();
         String table = dml.getTable();
         Map<String, MappingConfig> configMap = mappingConfigCache.get(destination + "." + database + "." + table);
-        Future<Boolean> future2 = null;
+        List<Future> futures = new ArrayList<>();
         if (configMap != null) {
-            for (ExecutorService thread : executorThreads) {
-                future2 = thread.submit(()->{
+            for (int i = 0; i < threads; i++) {
+                futures.add ( executorThreads[i].submit(()->{
                     configMap.values().forEach(config -> sync(mongoClient,config, dml));
                     return true;
-                });
+                }));
             }
         }
-        try {
-            future2.get();
-        } catch (Exception e) {
-            for (int i = 0; i < this.threads; i++) {
-                executorThreads[i].shutdown();
+        futures.forEach(future -> {
+            try {
+                future.get();
+            } catch (ExecutionException | InterruptedException e) {
+                throw new RuntimeException(e);
             }
-            throw new RuntimeException(e);
-        }
-
-
+        });
     }
     /**
      * 单条 dml 同步

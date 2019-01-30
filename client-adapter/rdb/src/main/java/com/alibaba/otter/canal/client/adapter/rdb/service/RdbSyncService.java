@@ -78,6 +78,7 @@ public class RdbSyncService {
             for (int i = 0; i < this.threads; i++) {
                 dmlsPartition[i] = new ArrayList<>();
                 batchExecutors[i] = new BatchExecutor(dataSource.getConnection());
+                //创建三个单例线程  串行执行下面的任务
                 executorThreads[i] = Executors.newSingleThreadExecutor();
             }
         } catch (SQLException e) {
@@ -95,6 +96,7 @@ public class RdbSyncService {
         boolean toExecute = false;
         for (Dml dml : dmls) {
             if (!toExecute) {
+                //函数 获取对应的value
                 toExecute = function.apply(dml);
             } else {
                 function.apply(dml);
