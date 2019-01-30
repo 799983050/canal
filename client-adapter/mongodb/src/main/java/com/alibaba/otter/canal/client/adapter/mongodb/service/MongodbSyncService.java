@@ -175,7 +175,6 @@ public class MongodbSyncService {
             try {
                 String type = dml.getType();
                 if (type != null && type.equalsIgnoreCase("INSERT")) {
-                    logger.info("方法调用了~~~~~~");
                     insert(batchExecutor,config, dml);
                 } else if (type != null && type.equalsIgnoreCase("UPDATE")) {
                     update(batchExecutor,config, dml);

@@ -112,7 +112,6 @@ public class MongodbAdapter implements OuterAdapter {
     @Override
     public void sync(List<Dml> dmls) {
         Future<Boolean> future1 = executorService.submit(() -> {
-            logger.info("第几次了!!~~~");
             mongodbSyncService.batchSync(mappingConfigCache,dmls);
             return true;
         });
