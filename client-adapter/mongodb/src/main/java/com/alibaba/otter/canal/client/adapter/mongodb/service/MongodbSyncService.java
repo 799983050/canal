@@ -2,19 +2,15 @@ package com.alibaba.otter.canal.client.adapter.mongodb.service;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.serializer.SerializerFeature;
-import com.alibaba.otter.canal.client.adapter.mongodb.MongodbAdapter;
 import com.alibaba.otter.canal.client.adapter.mongodb.config.MappingConfig;
 import com.alibaba.otter.canal.client.adapter.mongodb.config.MongodbTemplate;
+import com.alibaba.otter.canal.client.adapter.mongodb.logger.LoggerMessager;
 import com.alibaba.otter.canal.client.adapter.mongodb.support.BatchExecutor;
 import com.alibaba.otter.canal.client.adapter.mongodb.support.SingleDml;
 import com.alibaba.otter.canal.client.adapter.mongodb.support.SyncUtil;
 import com.alibaba.otter.canal.client.adapter.support.Dml;
 import com.alibaba.otter.canal.client.adapter.support.Util;
-import com.mongodb.MongoClient;
-import com.mongodb.MongoClientException;
-import com.mongodb.MongoSocketException;
 import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
@@ -23,9 +19,6 @@ import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.*;
@@ -132,22 +125,33 @@ public class MongodbSyncService {
                 }
                 boolean executed = false;
                 for (MappingConfig config : configMap.values()) {
-                    if (config.getConcurrent()) {
-                        //封装提取原始binlog的DML
-                        List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
-                        singleDmls.forEach(singleDml -> {
-                            int hash = pkHash(config.getDbMapping(), singleDml.getData());
-                            SyncItem syncItem = new SyncItem(config, singleDml);
-                            dmlsPartition[hash].add(syncItem);
-                        });
-                    } else {
-                        int hash = 0;
-                        //对  dml数据进行再封装
-                        List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
-                        singleDmls.forEach(singleDml -> {
-                            SyncItem syncItem = new SyncItem(config, singleDml);
-                            dmlsPartition[hash].add(syncItem);
-                        });
+                    //判断配置文件是否开启缓存
+                    if (config.getNoCache()){
+                        continue;
+                    }else {
+                        if (config.getConcurrent()) {
+                            //封装提取原始binlog的DML
+                            List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
+                            for (int i = 0; i < singleDmls.size(); i++) {
+                                // 哪张表 数据同步总量  当前第几条  剩余多少条
+                                LoggerMessager.DataSize(config.getDbMapping().getTargetTable(),singleDmls.size(),i+1,singleDmls.size()-i-1);
+                                SingleDml singleDml = singleDmls.get(i);
+                                int hash = pkHash(config.getDbMapping(), singleDml.getData());
+                                SyncItem syncItem = new SyncItem(config, singleDml);
+                                dmlsPartition[hash].add(syncItem);
+                            }
+                        } else {
+                            int hash = 0;
+                            //对  dml数据进行再封装
+                            List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
+                            for (int i = 0; i < singleDmls.size(); i++) {
+                                //  数据同步总量  当前第几条  剩余多少条
+                                LoggerMessager.DataSize(config.getDbMapping().getTargetTable(),singleDmls.size(),i+1,singleDmls.size()-i-1);
+                                SingleDml singleDml = singleDmls.get(i);
+                                SyncItem syncItem = new SyncItem(config, singleDml);
+                                dmlsPartition[hash].add(syncItem);
+                            }
+                        }
                     }
                     executed = true;
                 }
@@ -174,6 +178,8 @@ public class MongodbSyncService {
         if (config != null) {
             try {
                 String type = dml.getType();
+                long start = System.currentTimeMillis();
+                LoggerMessager.singleSyncStart(start,type,dml);
                 if (type != null && type.equalsIgnoreCase("INSERT")) {
                     insert(batchExecutor,config, dml);
                 } else if (type != null && type.equalsIgnoreCase("UPDATE")) {
@@ -181,6 +187,8 @@ public class MongodbSyncService {
                 } else if (type != null && type.equalsIgnoreCase("DELETE")) {
                     delete(batchExecutor,config, dml);
                 }
+                long over = System.currentTimeMillis();
+                LoggerMessager.singleSyncOver(start,over);
                 if (logger.isDebugEnabled()) {
                     logger.debug("DML: {}", JSON.toJSONString(dml, SerializerFeature.WriteMapNullValue));
                 }
@@ -295,7 +303,6 @@ public class MongodbSyncService {
             for (Map.Entry<String, String> entry : targetPk.entrySet()) {
                 pk = entry.getValue();
             }
-            logger.info("当前的主键为:{}",pk);
             Object pkValue = null;
             Map<String, String> columnsMap = SyncUtil.getColumnsMap(dbMapping, data);
             for (Map.Entry<String, String> mapping : columnsMap.entrySet()) {
@@ -314,7 +321,6 @@ public class MongodbSyncService {
                     notCache.add(s);
                 }
             }
-                logger.info("当前的主键值为:{}",pkValue);
                 //遍历新数据 获取pkData and pkName
                 for (Map.Entry<String, Object> s : data.entrySet()) {
                     if (!notCache.isEmpty()){

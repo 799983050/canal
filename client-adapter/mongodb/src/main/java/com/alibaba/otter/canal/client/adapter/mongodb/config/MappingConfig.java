@@ -21,7 +21,17 @@ public class MappingConfig {
 
     private Boolean   concurrent;      // 是否并行同步
 
+    private Boolean   noCache;         //是否缓存
+
     private DbMapping dbMapping;       // db映射配置
+
+    public Boolean getNoCache() {
+        return noCache;
+    }
+
+    public void setNoCache(Boolean noCache) {
+        this.noCache = noCache;
+    }
 
     public String getDataSourceKey() {
         return dataSourceKey;

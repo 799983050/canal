@@ -14,8 +14,8 @@ canal.conf:
   zookeeperHosts: 192.168.0.121:2181
 #  mqServers: 127.0.0.1:9876
 #  flatMessage: true
-  batchSize: 5
-  syncBatchSize: 5
+  batchSize: 50
+  syncBatchSize: 1000
   retries: 0
   timeout:
   accessKey:
@@ -47,14 +47,14 @@ canal.conf:
           mongo.core.username: cui
           mongo.core.password: cui
           mongo.core.dbname: mytest
-#      - name: mongodb
+#      - name: oracle
 #        key: mysql2
 #        properties:
 #          jdbc.driverClassName: oracle.jdbc.OracleDriver
 #          jdbc.url: jdbc:mysql://192.168.0.126/mytest?useUnicode=true&useSSL=false
 #          jdbc.username: root
 #          jdbc.password: root
-#      - name: mongodb
+#      - name: postgresq
 #        key: postgres1
 #        properties:
 #          jdbc.driverClassName: org.postgresql.Driver

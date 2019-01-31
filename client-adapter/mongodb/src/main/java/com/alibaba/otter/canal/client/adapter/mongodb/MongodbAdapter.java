@@ -8,6 +8,7 @@ import com.alibaba.otter.canal.client.adapter.mongodb.config.ConfigLoader;
 import com.alibaba.otter.canal.client.adapter.mongodb.config.MappingConfig;
 import com.alibaba.otter.canal.client.adapter.mongodb.config.MirrorDbConfig;
 import com.alibaba.otter.canal.client.adapter.mongodb.config.MongodbTemplate;
+import com.alibaba.otter.canal.client.adapter.mongodb.logger.LoggerMessager;
 import com.alibaba.otter.canal.client.adapter.mongodb.monitor.MongodbConfigMonitor;
 import com.alibaba.otter.canal.client.adapter.mongodb.service.MongodbSyncService;
 import com.alibaba.otter.canal.client.adapter.support.*;
@@ -111,12 +112,16 @@ public class MongodbAdapter implements OuterAdapter {
      */
     @Override
     public void sync(List<Dml> dmls) {
+        long start = System.currentTimeMillis();
+        LoggerMessager.batchSyncStart(start);
         Future<Boolean> future1 = executorService.submit(() -> {
             mongodbSyncService.batchSync(mappingConfigCache,dmls);
             return true;
         });
         try {
             future1.get();
+            long over = System.currentTimeMillis();
+            LoggerMessager.batchSyncOver(start,over);
         } catch (Exception e) {
             executorService.shutdown();
             throw new RuntimeException(e);

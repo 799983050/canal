@@ -198,7 +198,7 @@ public abstract class AbstractCanalAdapterWorker {
      * @param adapter
      */
     private void batchSync(List<Dml> dmls, OuterAdapter adapter) {
-        // 分批同步
+        // 分批同步   如果小于1000批   每批  50条
         if (dmls.size() <= canalClientConfig.getSyncBatchSize()) {
             adapter.sync(dmls);
         } else {

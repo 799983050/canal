@@ -1,7 +1,8 @@
 dataSourceKey: defaultDS
 destination: example
 outerAdapterKey: mongodb1
-concurrent: false
+concurrent: true
+noCache: false  #  true  表示当前缓存废弃  false 为开启当前缓存
 dbMapping:
   database: mytest
   table: user
@@ -10,7 +11,7 @@ dbMapping:
     id: id
   mapAll: true
   targetColumns:
-    username: username
+#    username: username
 #    role_id:
 #    c_time:
 #    test1:
