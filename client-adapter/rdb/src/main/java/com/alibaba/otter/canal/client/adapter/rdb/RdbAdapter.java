@@ -156,7 +156,10 @@ public class RdbAdapter implements OuterAdapter {
     @Override
     public void sync(List<Dml> dmls) {
         ExecutorService executorService = Executors.newFixedThreadPool(2);
-
+        /**
+         * 提供了两种选择：一种rdbSyncService：自己可以对字段做映射关系
+         * 另一种rdbMirrorDbSyncService： 就是字段完全一样（镜像库）
+         */
         Future<Boolean> future1 = executorService.submit(() -> {
             rdbSyncService.sync(mappingConfigCache, dmls);
             return true;
