@@ -2,6 +2,7 @@ package com.alibaba.otter.canal.deployer;
 
 import java.util.Properties;
 
+import com.alibaba.otter.canal.deployer.monitor.ManagerRemoteConfigMonitor;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +27,12 @@ public class CanalStater {
     private CanalMQProducer     canalMQProducer = null;
     private Thread              shutdownThread  = null;
     private CanalMQStarter      canalMQStarter  = null;
+
+    private ManagerRemoteConfigMonitor managerDbConfigMonitor;
+
+    public CanalStater(ManagerRemoteConfigMonitor managerDbConfigMonitor) {
+        this.managerDbConfigMonitor = managerDbConfigMonitor;
+    }
 
     /**
      * 启动方法
@@ -58,7 +65,9 @@ public class CanalStater {
                 try {
                     logger.info("## stop the canal server");
                     controller.stop();
-                    CanalLauncher.running = false;
+                    if(managerDbConfigMonitor!=null){
+                        managerDbConfigMonitor.destroy();
+                    }
                 } catch (Throwable e) {
                     logger.warn("##something goes wrong when stopping canal Server:", e);
                 } finally {

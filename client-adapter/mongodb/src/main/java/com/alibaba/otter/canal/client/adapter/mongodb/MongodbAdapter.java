@@ -40,8 +40,6 @@ public class MongodbAdapter implements OuterAdapter {
 
     private MongodbTemplate mongodbTemplate;
 
-    private ExecutorService executorService = Executors.newFixedThreadPool(1);
-
     public Map<String, MappingConfig> getRdbMapping() {
         return rdbMapping;
     }
@@ -112,6 +110,7 @@ public class MongodbAdapter implements OuterAdapter {
      */
     @Override
     public void sync(List<Dml> dmls) {
+        ExecutorService executorService = Executors.newFixedThreadPool(1);
         long start = System.currentTimeMillis();
         LoggerMessager.batchSyncStart(start);
         Future<Boolean> future1 = executorService.submit(() -> {
@@ -125,6 +124,8 @@ public class MongodbAdapter implements OuterAdapter {
         } catch (Exception e) {
             executorService.shutdown();
             throw new RuntimeException(e);
+        }finally {
+            executorService.shutdown();
         }
 
     }
@@ -142,10 +143,6 @@ public class MongodbAdapter implements OuterAdapter {
 
         if (mongodbSyncService != null) {
             mongodbSyncService.close();
-        }
-
-        if (executorService!=null){
-            executorService.shutdown();
         }
     }
 }

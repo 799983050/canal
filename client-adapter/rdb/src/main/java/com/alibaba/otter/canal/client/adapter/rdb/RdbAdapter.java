@@ -170,6 +170,8 @@ public class RdbAdapter implements OuterAdapter {
             future2.get();
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }finally {
+            executorService.shutdown();
         }
     }
 

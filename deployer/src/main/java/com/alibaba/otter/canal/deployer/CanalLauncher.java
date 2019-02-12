@@ -19,11 +19,9 @@ public class CanalLauncher {
 
     private static final String    CLASSPATH_URL_PREFIX = "classpath:";
     private static final Logger    logger               = LoggerFactory.getLogger(CanalLauncher.class);
-    public static volatile boolean running              = false;
 
     public static void main(String[] args) {
         try {
-            running = true;
             logger.info("## set default uncaught exception handler");
             setGlobalUncaughtExceptionHandler();
 
@@ -58,7 +56,7 @@ public class CanalLauncher {
                 logger.info("## load canal configurations");
             }
 
-            final CanalStater canalStater = new CanalStater();
+            final CanalStater canalStater = new CanalStater(managerDbConfigMonitor);
             canalStater.start(properties);
 
             if (managerDbConfigMonitor != null) {
@@ -77,12 +75,6 @@ public class CanalLauncher {
                 });
             }
 
-            while (running)
-                ;
-
-            if (managerDbConfigMonitor != null) {
-                managerDbConfigMonitor.destroy();
-            }
         } catch (Throwable e) {
             logger.error("## Something goes wrong when starting up the canal Server:", e);
         }
