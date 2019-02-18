@@ -33,8 +33,8 @@ public class CuratorClient {
             curator = CuratorFrameworkFactory.builder()
                 .connectString(adapterCanalConfig.getZookeeperHosts())
                 .retryPolicy(new ExponentialBackoffRetry(1000, 3))
-                .sessionTimeoutMs(6000)
-                .connectionTimeoutMs(3000)
+                .sessionTimeoutMs(40000)
+                .connectionTimeoutMs(10000)
                 .namespace("canal-adapter")
                 .build();
             curator.start();

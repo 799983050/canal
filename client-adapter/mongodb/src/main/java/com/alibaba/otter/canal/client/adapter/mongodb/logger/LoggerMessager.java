@@ -27,8 +27,8 @@ public class LoggerMessager {
     }
 
     //  单条同步结束时间和 业务处理时间
-    public static void singleSyncOver(long singleStartSync,long singleOverSync){
-        logger.info("单条同步 : 业务结束时间 =====>>>> 业务耗时 ：SingleDmlSync over ---> this time is :[{}],The business time:[{}] ",singleOverSync,singleOverSync-singleStartSync);
+    public static void exceptionData(SingleDml dml){
+        logger.info("同步失败数据: filed syncData =====>>>>:[{}]",dml);
     }
 
     public static void batchSyncOver(long batchStart,long batchOver){

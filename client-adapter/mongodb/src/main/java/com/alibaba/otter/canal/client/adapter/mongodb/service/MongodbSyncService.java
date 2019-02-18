@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 /**
@@ -105,7 +106,9 @@ public class MongodbSyncService {
      * 批量同步
      */
     public void batchSync(Map<String, Map<String, MappingConfig>> mappingConfigCache,List<Dml> dmls){
+        AtomicInteger count = new AtomicInteger(1);
         sync(dmls, dml -> {
+            int counts = count.getAndIncrement();
             if (dml.getData() == null && StringUtils.isNotEmpty(dml.getSql())) {
                         // DDL
                         if (logger.isDebugEnabled()) {
@@ -134,7 +137,7 @@ public class MongodbSyncService {
                             List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
                             for (int i = 0; i < singleDmls.size(); i++) {
                                 // 哪张表 数据同步总量  当前第几条  剩余多少条
-                                LoggerMessager.DataSize(config.getDbMapping().getTargetTable(),singleDmls.size(),i+1,singleDmls.size()-i-1);
+                                LoggerMessager.DataSize(config.getDbMapping().getTargetTable(),dmls.size(),counts,dmls.size()-counts);
                                 SingleDml singleDml = singleDmls.get(i);
                                 int hash = pkHash(config.getDbMapping(), singleDml.getData());
                                 SyncItem syncItem = new SyncItem(config, singleDml);
@@ -146,7 +149,7 @@ public class MongodbSyncService {
                             List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
                             for (int i = 0; i < singleDmls.size(); i++) {
                                 //  数据同步总量  当前第几条  剩余多少条
-                                LoggerMessager.DataSize(config.getDbMapping().getTargetTable(),singleDmls.size(),i+1,singleDmls.size()-i-1);
+                                LoggerMessager.DataSize(config.getDbMapping().getTargetTable(),dmls.size(),counts,dmls.size()-counts);
                                 SingleDml singleDml = singleDmls.get(i);
                                 SyncItem syncItem = new SyncItem(config, singleDml);
                                 dmlsPartition[hash].add(syncItem);
@@ -178,8 +181,6 @@ public class MongodbSyncService {
         if (config != null) {
             try {
                 String type = dml.getType();
-                long start = System.currentTimeMillis();
-                LoggerMessager.singleSyncStart(start,type,dml);
                 if (type != null && type.equalsIgnoreCase("INSERT")) {
                     insert(batchExecutor,config, dml);
                 } else if (type != null && type.equalsIgnoreCase("UPDATE")) {
@@ -187,12 +188,11 @@ public class MongodbSyncService {
                 } else if (type != null && type.equalsIgnoreCase("DELETE")) {
                     delete(batchExecutor,config, dml);
                 }
-                long over = System.currentTimeMillis();
-                LoggerMessager.singleSyncOver(start,over);
                 if (logger.isDebugEnabled()) {
                     logger.debug("DML: {}", JSON.toJSONString(dml, SerializerFeature.WriteMapNullValue));
                 }
             } catch (SQLException e) {
+                LoggerMessager.exceptionData(dml);
                 throw new RuntimeException(e);
             }
         }
