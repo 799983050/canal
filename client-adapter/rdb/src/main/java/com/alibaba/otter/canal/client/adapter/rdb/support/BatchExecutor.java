@@ -37,6 +37,7 @@ public class BatchExecutor implements Closeable {
 
     public void execute(String sql, List<Map<String, ?>> values) throws SQLException {
         PreparedStatement pstmt = conn.prepareStatement(sql);
+        pstmt.setFetchSize(1000);
         int len = values.size();
         for (int i = 0; i < len; i++) {
             //获取类型
