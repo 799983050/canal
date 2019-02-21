@@ -90,6 +90,8 @@ public class AdapterRemoteConfigMonitor {
                 configItem.setName(rs.getString("name"));
                 configItem.setContent(rs.getString("content"));
                 configItem.setModifiedTime(rs.getTimestamp("modified_time").getTime());
+                stmt.close();
+                rs.close();
                 return configItem;
             }
         } catch (Exception e) {
@@ -170,6 +172,8 @@ public class AdapterRemoteConfigMonitor {
                 configItem.setName(rs.getString("name"));
                 configItem.setModifiedTime(rs.getTimestamp("modified_time").getTime());
                 remoteConfigStatus.put(configItem.getCategory() + "/" + configItem.getName(), configItem);
+                stmt.close();
+                rs.close();
             }
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
@@ -209,6 +213,8 @@ public class AdapterRemoteConfigMonitor {
                             configItemNew);
                         changedInstanceConfig.put(configItemNew.getCategory() + "/" + configItemNew.getName(),
                             configItemNew);
+                        stmt.close();
+                        rs.close();
                     }
 
                     res[0] = changedInstanceConfig.isEmpty() ? null : changedInstanceConfig;

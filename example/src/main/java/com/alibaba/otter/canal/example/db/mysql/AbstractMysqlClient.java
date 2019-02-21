@@ -38,12 +38,13 @@ public abstract class AbstractMysqlClient extends AbstractDbClient {
     private SqlTemplate sqlTemplate;
 
     protected Integer execute(final CanalEntry.Header header, final List<CanalEntry.Column> columns) {
-        final String sql = getSql(header, columns);
         final LobCreator lobCreator = dbDialect.getLobHandler().getLobCreator();
         dbDialect.getTransactionTemplate().execute(new TransactionCallback() {
 
             public Object doInTransaction(TransactionStatus status) {
                 try {
+                    String sql;
+                    sql = getSql(header, columns);
                     JdbcTemplate template = dbDialect.getJdbcTemplate();
                     int affect = template.update(sql, new PreparedStatementSetter() {
 
@@ -51,6 +52,7 @@ public abstract class AbstractMysqlClient extends AbstractDbClient {
                             doPreparedStatement(ps, dbDialect, lobCreator, header, columns);
                         }
                     });
+                    sql = "";
                     return affect;
                 } finally {
                     lobCreator.close();

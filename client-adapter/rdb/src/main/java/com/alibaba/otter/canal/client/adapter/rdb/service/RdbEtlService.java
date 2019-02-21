@@ -265,6 +265,7 @@ public class RdbEtlService {
                         if (logger.isDebugEnabled()) {
                             logger.debug("successful import count:" + successCount.get());
                         }
+                        pstmt.close();
                     }
                     if (!completed) {
                         connTarget.commit();

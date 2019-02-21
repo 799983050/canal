@@ -116,7 +116,9 @@ public class EntryEventSink extends AbstractCanalEventSink<List<CanalEntry.Entry
 
         if (hasRowData || hasHeartBeat) {
             // 存在row记录 或者 存在heartbeat记录，直接跳给后续处理
-            return doSink(events);
+            boolean bool = doSink(events);
+            events.clear();
+            return bool;
         } else {
             // 需要过滤的数据
             if (filterEmtryTransactionEntry && !CollectionUtils.isEmpty(events)) {
@@ -126,7 +128,10 @@ public class EntryEventSink extends AbstractCanalEventSink<List<CanalEntry.Entry
                     || lastEmptyTransactionCount.incrementAndGet() > emptyTransctionThresold) {
                     lastEmptyTransactionCount.set(0L);
                     lastEmptyTransactionTimestamp = currentTimestamp;
-                    return doSink(events);
+                    // 存在row记录 或者 存在heartbeat记录，直接跳给后续处理
+                    boolean bool = doSink(events);
+                    events.clear();
+                    return bool;
                 }
             }
 

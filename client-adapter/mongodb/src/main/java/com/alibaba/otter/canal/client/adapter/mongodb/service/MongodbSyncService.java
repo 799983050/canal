@@ -143,6 +143,7 @@ public class MongodbSyncService {
                                 SyncItem syncItem = new SyncItem(config, singleDml);
                                 dmlsPartition[hash].add(syncItem);
                             }
+                            singleDmls.clear();
                         } else {
                             int hash = 0;
                             //对  dml数据进行再封装
@@ -154,6 +155,7 @@ public class MongodbSyncService {
                                 SyncItem syncItem = new SyncItem(config, singleDml);
                                 dmlsPartition[hash].add(syncItem);
                             }
+                            singleDmls.clear();
                         }
                     }
                     executed = true;
@@ -261,6 +263,8 @@ public class MongodbSyncService {
                 //collection   可以对mongo库进行操作 插入数据
                 collections = mongodbTemplate.getCollection(batchExecutor.getMongoClient(),database,collection);
                 collections.insertOne(document);
+                //清空集合
+                notCache.clear();
             }catch (Exception e){
                 logger.info("数据插入失败:{}",e);
             }

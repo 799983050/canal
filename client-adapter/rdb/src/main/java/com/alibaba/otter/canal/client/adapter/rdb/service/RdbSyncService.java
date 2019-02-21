@@ -128,6 +128,7 @@ public class RdbSyncService {
                     throw new RuntimeException(e);
                 }
             });
+            futures.clear();
         }
     }
 
@@ -164,6 +165,7 @@ public class RdbSyncService {
                         SyncItem syncItem = new SyncItem(config, singleDml);
                         dmlsPartition[hash].add(syncItem);
                     });
+                    singleDmls.clear();
                 } else {
                     int hash = 0;
                     //对  dml数据进行再封装
@@ -172,6 +174,7 @@ public class RdbSyncService {
                         SyncItem syncItem = new SyncItem(config, singleDml);
                         dmlsPartition[hash].add(syncItem);
                     });
+                    singleDmls.clear();
                 }
                 executed = true;
             }
@@ -337,6 +340,7 @@ public class RdbSyncService {
                     BatchExecutor.setValue(values, type, data.get(srcColumnName));
                 }
             }
+            targetColumnNames.clear();
         }
         int len = updateSql.length();
         // 去掉循环多余的字符  拼接sql

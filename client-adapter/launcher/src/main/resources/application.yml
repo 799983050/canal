@@ -14,7 +14,7 @@ canal.conf:
   zookeeperHosts: 192.168.0.121:2181
 #  mqServers: 127.0.0.1:9876
 #  flatMessage: true
-  batchSize: 50
+  batchSize: 500
   syncBatchSize: 1000
   retries: 0
   timeout:

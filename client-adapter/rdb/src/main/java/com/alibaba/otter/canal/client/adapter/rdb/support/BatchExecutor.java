@@ -36,20 +36,29 @@ public class BatchExecutor implements Closeable {
     }
 
     public void execute(String sql, List<Map<String, ?>> values) throws SQLException {
-        PreparedStatement pstmt = conn.prepareStatement(sql);
-        pstmt.setFetchSize(1000);
-        int len = values.size();
-        for (int i = 0; i < len; i++) {
-            //获取类型
-            int type = (Integer) values.get(i).get("type");
-            //获取数据
-            Object value = values.get(i).get("value");
-            //进行同步
-            SyncUtil.setPStmt(type, pstmt, value, i + 1);
+        PreparedStatement pstmt = null;
+        try {
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setFetchSize(1000);
+            int len = values.size();
+            for (int i = 0; i < len; i++) {
+                //获取类型
+                int type = (Integer) values.get(i).get("type");
+                //获取数据
+                Object value = values.get(i).get("value");
+                //进行同步
+                SyncUtil.setPStmt(type, pstmt, value, i + 1);
+            }
+            pstmt.execute();
+            idx.incrementAndGet();
+        } catch (SQLException e) {
+            pstmt.close();
+            e.printStackTrace();
+        }finally {
+            pstmt.close();
+            values.clear();
+            sql = "";
         }
-
-        pstmt.execute();
-        idx.incrementAndGet();
     }
 
     public void commit() throws SQLException {
