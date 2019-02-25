@@ -150,22 +150,28 @@ public class MemoryEventStoreWithBuffer extends AbstractCanalStoreScavenge imple
             lock.unlock();
         }
     }
-
+    /**
+     *  添加一组数据对象 （例如一次性添加一个事务的数据）
+     */
     public boolean tryPut(List<Event> data) throws CanalStoreException {
         if (data == null || data.isEmpty()) {
             return true;
         }
-
+        //可重入锁
         final ReentrantLock lock = this.lock;
+        //如果持有锁的线程再次获取，是不会阻塞的，只是持锁的次数增加
         lock.lock();
         try {
+            //如果尝试放入这么多数据  看是否可以放下
             if (!checkFreeSlotAt(putSequence.get() + data.size())) {
                 return false;
             } else {
+                //如果能放下就放入
                 doPut(data);
                 return true;
             }
         } finally {
+            //释放锁
             lock.unlock();
         }
     }

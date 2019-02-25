@@ -116,9 +116,9 @@ public class EntryEventSink extends AbstractCanalEventSink<List<CanalEntry.Entry
 
         if (hasRowData || hasHeartBeat) {
             // 存在row记录 或者 存在heartbeat记录，直接跳给后续处理
-            boolean bool = doSink(events);
+            boolean sink = doSink(events);
             events.clear();
-            return bool;
+            return sink;
         } else {
             // 需要过滤的数据
             if (filterEmtryTransactionEntry && !CollectionUtils.isEmpty(events)) {
@@ -128,10 +128,9 @@ public class EntryEventSink extends AbstractCanalEventSink<List<CanalEntry.Entry
                     || lastEmptyTransactionCount.incrementAndGet() > emptyTransctionThresold) {
                     lastEmptyTransactionCount.set(0L);
                     lastEmptyTransactionTimestamp = currentTimestamp;
-                    // 存在row记录 或者 存在heartbeat记录，直接跳给后续处理
-                    boolean bool = doSink(events);
+                    boolean sink = doSink(events);
                     events.clear();
-                    return bool;
+                    return sink;
                 }
             }
 
@@ -158,12 +157,16 @@ public class EntryEventSink extends AbstractCanalEventSink<List<CanalEntry.Entry
     }
 
     protected boolean doSink(List<Event> events) {
+        //CanalEventDownStreamHandler 数据流处理
+        //getHandles <=> HeartBeatEntryEventHandle  这里将进行心跳信息过滤
+        //getHandles 再sink模板实例化的时候 添加了 HeartBeatEntryEventHandle
         for (CanalEventDownStreamHandler<List<Event>> handler : getHandlers()) {
             events = handler.before(events);
         }
         long blockingStart = 0L;
         int fullTimes = 0;
         do {
+            //尝试将信息binlog存入内存中 如果内存满了,将一直等待
             if (eventStore.tryPut(events)) {
                 if (fullTimes > 0) {
                     eventsSinkBlockingTime.addAndGet(System.nanoTime() - blockingStart);
@@ -187,7 +190,7 @@ public class EntryEventSink extends AbstractCanalEventSink<List<CanalEntry.Entry
             for (CanalEventDownStreamHandler<List<Event>> handler : getHandlers()) {
                 events = handler.retry(events);
             }
-
+            //如果instance 还在运行，而且线程没有被中断
         } while (running && !Thread.interrupted());
         return false;
     }
