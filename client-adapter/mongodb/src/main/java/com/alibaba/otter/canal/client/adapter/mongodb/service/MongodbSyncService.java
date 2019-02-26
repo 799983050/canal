@@ -225,6 +225,14 @@ public class MongodbSyncService {
                 notCache.add(s);
             }
         }
+        //获取主键
+        String pk = null;
+        //主键映射,获取主键
+        Map<String, String> targetPk = dbMapping.getTargetPk();
+        for (Map.Entry<String, String> entry : targetPk.entrySet()) {
+            pk = entry.getValue();
+        }
+
         Map<String, String> columnsMap = SyncUtil.getColumnsMap(dbMapping, data);
             //获取源数据字段类型
         document = new Document();
@@ -239,7 +247,11 @@ public class MongodbSyncService {
                         String srcColumnName = entry.getValue();
                         //获取源字段对应数据
                         Object value = data.get(srcColumnName);
-                        document.put(srcColumnName,value);
+                        if(srcColumnName.equals(pk)){
+                            document.put("_id",value);
+                        }else {
+                            document.put(srcColumnName,value);
+                        }
                     }
                 }
             }else{
@@ -247,7 +259,11 @@ public class MongodbSyncService {
                 String srcColumnName = entry.getValue();
                 //获取源字段对应数据
                 Object value = data.get(srcColumnName);
-                document.put(srcColumnName,value);
+                if(srcColumnName.equals(pk)){
+                    document.put("_id",value);
+                }else {
+                    document.put(srcColumnName,value);
+                }
             }
 
             }
@@ -332,16 +348,24 @@ public class MongodbSyncService {
                             if (s.getKey().equals(s1)){
                                 continue;
                             }else {
-                                documentNew.put(s.getKey(), s.getValue());
+                                if(s.getKey().equals(pk)){
+                                    documentNew.put("_id", s.getValue());
+                                }else {
+                                    documentNew.put(s.getKey(), s.getValue());
+                                }
                             }
                         }
 
                     }else {
-                        documentNew.put(s.getKey(), s.getValue());
+                        if(s.getKey().equals(pk)){
+                            documentNew.put("_id", s.getValue());
+                        }else {
+                            documentNew.put(s.getKey(), s.getValue());
+                        }
                     }
                 }
                 //修改数据   获取_id   _id 和主键没有关系 通过mysql主键
-                UpdateResult updateResult = collections.updateMany(Filters.eq(pk, pkValue), new Document("$set", documentNew));
+                UpdateResult updateResult = collections.updateMany(Filters.eq("_id", pkValue), new Document("$set", documentNew));
         } catch (Exception e) {
             logger.info("数据更新失败:{}",e);
         }
@@ -391,7 +415,7 @@ public class MongodbSyncService {
                         continue;
                     }
                 }
-            DeleteResult deleteResult = collections.deleteMany(Filters.eq(pk, pkValue));
+            DeleteResult deleteResult = collections.deleteMany(Filters.eq("_id", pkValue));
         } catch (Exception e) {
             logger.info("mongodb数据删除失败:{}",e);
         }
