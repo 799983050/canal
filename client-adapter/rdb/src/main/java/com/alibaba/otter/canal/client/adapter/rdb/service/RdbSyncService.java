@@ -3,6 +3,7 @@ package com.alibaba.otter.canal.client.adapter.rdb.service;
 import java.sql.Connection;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.function.Function;
 
 import javax.sql.DataSource;
 
+import com.alibaba.otter.canal.client.adapter.rdb.config.MirrorDbConfig;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +52,7 @@ public class RdbSyncService {
     private BatchExecutor[]                   batchExecutors;
     private ExecutorService[]                 executorThreads;
 
+    private DataSource dataSources;
     public List<SyncItem>[] getDmlsPartition() {
         return dmlsPartition;
     }
@@ -68,6 +71,7 @@ public class RdbSyncService {
                           boolean skipDupException){
         this.columnsTypeCache = columnsTypeCache;
         this.skipDupException = skipDupException;
+        this.dataSources=dataSource;
         try {
             if (threads != null) {
                 this.threads = threads;
@@ -140,7 +144,8 @@ public class RdbSyncService {
      */
     public void sync(Map<String, Map<String, MappingConfig>> mappingConfig, List<Dml> dmls) {
         sync(dmls, dml -> {
-            if (dml.getIsDdl() != null && dml.getIsDdl() && StringUtils.isNotEmpty(dml.getSql())) {
+            if (dml.getData() == null && StringUtils.isNotEmpty(dml.getSql())) {
+                executeDdl(dml);
                 // DDL
             columnsTypeCache.remove(dml.getDestination() + "." + dml.getDatabase() + "." + dml.getTable());
             return false;
@@ -182,7 +187,23 @@ public class RdbSyncService {
         }
     }   );
     }
-
+    /**
+     * DDL 操作
+     *
+     * @param ddl DDL
+     */
+    private void executeDdl(Dml ddl) {
+        try (Connection conn = dataSources.getConnection(); Statement statement = conn.createStatement()) {
+            statement.execute(ddl.getSql());
+            statement.close();
+            conn.close();
+            if (logger.isTraceEnabled()) {
+                logger.trace("Execute DDL sql: {} for database: {}", ddl.getSql(), ddl.getDatabase());
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
     /**
      * 单条 dml 同步
      *
