@@ -33,20 +33,20 @@ canal.conf:
     - groupId: g1
       outerAdapters:
       - name: logger
-      - name: rdb
-        key: mysql1
-        properties:
-          jdbc.driverClassName: com.mysql.jdbc.Driver
-          jdbc.url: jdbc:mysql://192.168.0.141/mytest?useUnicode=true&useSSL=false
-          jdbc.username: cuitong
-          jdbc.password: root
-#      - name: mongodb
-#        key: mongodb1
+#      - name: rdb
+#        key: mysql1
 #        properties:
-#          mongo.core.replica.set: 192.168.0.141:27017
-#          mongo.core.username: cui
-#          mongo.core.password: cui
-#          mongo.core.dbname: mytest
+#          jdbc.driverClassName: com.mysql.jdbc.Driver
+#          jdbc.url: jdbc:mysql://192.168.0.141/mytest?useUnicode=true&useSSL=false
+#          jdbc.username: cuitong
+#          jdbc.password: root
+      - name: mongodb
+        key: mongodb1
+        properties:
+          mongo.core.replica.set: 192.168.0.141:27017
+          mongo.core.username: cui
+          mongo.core.password: cui
+          mongo.core.dbname: mytest
 #      - name: oracle
 #        key: mysql2
 #        properties:
