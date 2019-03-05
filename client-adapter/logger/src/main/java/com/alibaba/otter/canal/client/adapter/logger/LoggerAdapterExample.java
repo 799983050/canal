@@ -31,7 +31,7 @@ public class LoggerAdapterExample implements OuterAdapter {
 
     public void sync(List<Dml> dmls) {
         for (Dml dml : dmls) {
-            sync(dml);
+//            sync(dml);
         }
     }
 

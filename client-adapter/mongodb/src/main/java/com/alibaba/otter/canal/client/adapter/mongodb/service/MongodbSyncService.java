@@ -233,7 +233,7 @@ public class MongodbSyncService {
             pk = entry.getValue();
         }
 
-        Map<String, String> columnsMap = SyncUtil.getColumnsMap(dbMapping, data);
+        Map<String, String> columnsMap = SyncUtil.getColumn(dbMapping, data);
             //获取源数据字段类型
         document = new Document();
         for (Map.Entry<String, String> entry : columnsMap.entrySet()) {
@@ -324,7 +324,7 @@ public class MongodbSyncService {
                 pk = entry.getValue();
             }
             Object pkValue = null;
-            Map<String, String> columnsMap = SyncUtil.getColumnsMap(dbMapping, data);
+            Map<String, String> columnsMap = SyncUtil.getColumn(dbMapping, data);
             for (Map.Entry<String, String> mapping : columnsMap.entrySet()) {
                 if (pk.equals(mapping.getValue())){
                     String pkName = mapping.getValue();

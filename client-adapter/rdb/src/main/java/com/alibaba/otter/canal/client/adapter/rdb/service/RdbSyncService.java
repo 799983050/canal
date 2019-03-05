@@ -145,7 +145,7 @@ public class RdbSyncService {
     public void sync(Map<String, Map<String, MappingConfig>> mappingConfig, List<Dml> dmls) {
         sync(dmls, dml -> {
             if (dml.getData() == null && StringUtils.isNotEmpty(dml.getSql())) {
-                if(dml.getTable().equals("meta_history")||dml.getTable().equals("meta_snapshot")){
+                if(dml.getDatabase().equals("canal_tsdb")){
                     logger.info("================不同步binlog日志表=============");
                 }else {
                     executeDdl(dml);

@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -18,7 +19,19 @@ public class SyncUtil {
     public static Map<String, String> getColumnsMap(MappingConfig.DbMapping dbMapping, Map<String, Object> data) {
         return getColumnsMap(dbMapping, data.keySet());
     }
-
+    public static Map<String,String> getColumn(MappingConfig.DbMapping dbMapping,Map<String, Object> data){
+        Map<String, String> columnsMap = null;
+        try {
+            columnsMap = new HashMap<>();
+            for (String s : data.keySet()) {
+                columnsMap.put(s,s);
+            }
+            dbMapping.setAllMapColumns(columnsMap);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return columnsMap;
+    }
     public static Map<String, String> getColumnsMap(MappingConfig.DbMapping dbMapping, Collection<String> columns) {
         Map<String, String> columnsMap;
         if (dbMapping.getMapAll()) {
