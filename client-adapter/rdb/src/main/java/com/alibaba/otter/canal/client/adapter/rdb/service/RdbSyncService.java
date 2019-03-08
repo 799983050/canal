@@ -294,6 +294,7 @@ public class RdbSyncService {
         try {
             //同步
             batchExecutor.execute(insertSql.toString(), values);
+            columnsMap.clear();
         } catch (SQLException e) {
             if (skipDupException
                 && (e.getMessage().contains("Duplicate entry") || e.getMessage().startsWith("ORA-00001: 违反唯一约束条件"))) {
@@ -374,6 +375,7 @@ public class RdbSyncService {
         // 拼接主键
         appendCondition(dbMapping, updateSql, ctype, values, data, old);
         batchExecutor.execute(updateSql.toString(), values);
+        columnsMap.clear();
         if (logger.isTraceEnabled()) {
             logger.trace("Update target table, sql: {}", updateSql);
         }

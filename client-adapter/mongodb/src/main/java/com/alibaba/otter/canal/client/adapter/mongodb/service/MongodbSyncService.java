@@ -281,6 +281,7 @@ public class MongodbSyncService {
                 collections.insertOne(document);
                 //清空集合
                 notCache.clear();
+                columnsMap.clear();
             }catch (Exception e){
                 logger.info("数据插入失败:{}",e);
             }
@@ -366,6 +367,7 @@ public class MongodbSyncService {
                 }
                 //修改数据   获取_id   _id 和主键没有关系 通过mysql主键
                 UpdateResult updateResult = collections.updateMany(Filters.eq("_id", pkValue), new Document("$set", documentNew));
+                columnsMap.clear();
         } catch (Exception e) {
             logger.info("数据更新失败:{}",e);
         }
