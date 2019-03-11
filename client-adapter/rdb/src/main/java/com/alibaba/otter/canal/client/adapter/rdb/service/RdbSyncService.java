@@ -152,8 +152,10 @@ public class RdbSyncService {
                 if(dml.getDatabase().equals("canal_tsdb")){
                     logger.info("================不同步binlog日志表=============");
                 }else {
-                    for (MappingConfig config : configMap.values()) {
-                        executeDdl(dml,config);
+                    if (configMap!=null){
+                        for (MappingConfig config : configMap.values()) {
+                            executeDdl(dml,config);
+                        }
                     }
                 }
                 // DDL
@@ -198,9 +200,9 @@ public class RdbSyncService {
      * @param ddl DDL
      */
     private void executeDdl(Dml ddl,MappingConfig config) {
+        Map<String, String> columnsMap =null;
         try (Connection conn = dataSources.getConnection(); Statement statement = conn.createStatement()) {
             statement.execute(ddl.getSql());
-            Map<String, String> columnsMap =null;
             if (config.getDbMapping().getAllMapColumns()!=null){
                 logger.info("=============开始清除列名缓存============");
                 config.getDbMapping().setAllMapColumns(columnsMap);
@@ -212,7 +214,11 @@ public class RdbSyncService {
                 logger.trace("Execute DDL sql: {} for database: {}", ddl.getSql(), ddl.getDatabase());
             }
         } catch (Exception e) {
-            logger.info("=============清除列名缓存异常============");
+            if (config.getDbMapping().getAllMapColumns()!=null){
+                logger.info("=============开始清除列名缓存============");
+                config.getDbMapping().setAllMapColumns(columnsMap);
+                logger.info("=============清除列名缓存结束============");
+            }
             throw new RuntimeException(e);
         }
     }

@@ -115,12 +115,14 @@ public class MongodbSyncService {
             Map<String, MappingConfig> configMap = mappingConfigCache.get(destination + "." + database + "." + table);
             if (dml.getData() == null && StringUtils.isNotEmpty(dml.getSql())) {
                         // DDL
-                        if (logger.isDebugEnabled()) {
-                            logger.debug("DDL: {}", JSON.toJSONString(dml, SerializerFeature.WriteMapNullValue));
-                        }
-                for (MappingConfig config : configMap.values()) {
-                    executeDdl(dml,config);
-                }
+                 if (logger.isDebugEnabled()) {
+                     logger.debug("DDL: {}", JSON.toJSONString(dml, SerializerFeature.WriteMapNullValue));
+                  }
+                 if (configMap!=null){
+                     for (MappingConfig config : configMap.values()) {
+                         executeDdl(dml,config);
+                     }
+                 }
                 return false;
             }else {
                 // DML
