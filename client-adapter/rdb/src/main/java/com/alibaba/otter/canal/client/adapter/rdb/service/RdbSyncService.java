@@ -144,22 +144,23 @@ public class RdbSyncService {
      */
     public void sync(Map<String, Map<String, MappingConfig>> mappingConfig, List<Dml> dmls) {
         sync(dmls, dml -> {
+            String destination = StringUtils.trimToEmpty(dml.getDestination());
+            String database = dml.getDatabase();
+            String table = dml.getTable();
+            Map<String, MappingConfig> configMap = mappingConfig.get(destination + "." + database + "." + table);
             if (dml.getData() == null && StringUtils.isNotEmpty(dml.getSql())) {
                 if(dml.getDatabase().equals("canal_tsdb")){
                     logger.info("================不同步binlog日志表=============");
                 }else {
-                    executeDdl(dml);
+                    for (MappingConfig config : configMap.values()) {
+                        executeDdl(dml,config);
+                    }
                 }
                 // DDL
             columnsTypeCache.remove(dml.getDestination() + "." + dml.getDatabase() + "." + dml.getTable());
             return false;
         } else {
             // DML
-            String destination = StringUtils.trimToEmpty(dml.getDestination());
-            String database = dml.getDatabase();
-            String table = dml.getTable();
-            Map<String, MappingConfig> configMap = mappingConfig.get(destination + "." + database + "." + table);
-
             if (configMap == null) {
                 return false;
             }
@@ -196,15 +197,22 @@ public class RdbSyncService {
      *
      * @param ddl DDL
      */
-    private void executeDdl(Dml ddl) {
+    private void executeDdl(Dml ddl,MappingConfig config) {
         try (Connection conn = dataSources.getConnection(); Statement statement = conn.createStatement()) {
             statement.execute(ddl.getSql());
+            Map<String, String> columnsMap =null;
+            if (config.getDbMapping().getAllMapColumns()!=null){
+                logger.info("=============开始清除列名缓存============");
+                config.getDbMapping().setAllMapColumns(columnsMap);
+                logger.info("=============清除列名缓存结束============");
+            }
             statement.close();
             conn.close();
             if (logger.isTraceEnabled()) {
                 logger.trace("Execute DDL sql: {} for database: {}", ddl.getSql(), ddl.getDatabase());
             }
         } catch (Exception e) {
+            logger.info("=============清除列名缓存异常============");
             throw new RuntimeException(e);
         }
     }
@@ -294,7 +302,6 @@ public class RdbSyncService {
         try {
             //同步
             batchExecutor.execute(insertSql.toString(), values);
-            columnsMap.clear();
         } catch (SQLException e) {
             if (skipDupException
                 && (e.getMessage().contains("Duplicate entry") || e.getMessage().startsWith("ORA-00001: 违反唯一约束条件"))) {
@@ -375,7 +382,6 @@ public class RdbSyncService {
         // 拼接主键
         appendCondition(dbMapping, updateSql, ctype, values, data, old);
         batchExecutor.execute(updateSql.toString(), values);
-        columnsMap.clear();
         if (logger.isTraceEnabled()) {
             logger.trace("Update target table, sql: {}", updateSql);
         }

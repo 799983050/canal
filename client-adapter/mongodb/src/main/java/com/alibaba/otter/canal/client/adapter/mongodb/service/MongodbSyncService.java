@@ -109,20 +109,21 @@ public class MongodbSyncService {
         AtomicInteger count = new AtomicInteger(1);
         sync(dmls, dml -> {
             int counts = count.getAndIncrement();
+            String destination = StringUtils.trimToEmpty(dml.getDestination());
+            String database = dml.getDatabase();
+            String table = dml.getTable();
+            Map<String, MappingConfig> configMap = mappingConfigCache.get(destination + "." + database + "." + table);
             if (dml.getData() == null && StringUtils.isNotEmpty(dml.getSql())) {
                         // DDL
                         if (logger.isDebugEnabled()) {
                             logger.debug("DDL: {}", JSON.toJSONString(dml, SerializerFeature.WriteMapNullValue));
                         }
-                        executeDdl(dml);
-                        return false;
+                for (MappingConfig config : configMap.values()) {
+                    executeDdl(dml,config);
+                }
+                return false;
             }else {
                 // DML
-                String destination = StringUtils.trimToEmpty(dml.getDestination());
-                String database = dml.getDatabase();
-                String table = dml.getTable();
-                Map<String, MappingConfig> configMap = mappingConfigCache.get(destination + "." + database + "." + table);
-
                 if (configMap == null) {
                     return false;
                 }
@@ -169,7 +170,18 @@ public class MongodbSyncService {
      *
      * @param ddl DDL
      */
-    private void executeDdl(Dml ddl) {
+    private void executeDdl(Dml ddl,MappingConfig config) {
+        try {
+            Map<String, String> columnsMap =null;
+            if (config.getDbMapping().getAllMapColumns()!=null){
+                logger.info("=============开始清除列名缓存============");
+                config.getDbMapping().setAllMapColumns(columnsMap);
+                logger.info("=============清除列名缓存结束============");
+            }
+        }catch (Exception e){
+            logger.info("=============清除列名缓存异常============");
+            throw new RuntimeException(e);
+        }
         logger.trace("Execute DDL sql: {}, for database: {}", ddl.getSql(), ddl.getDatabase());
     }
     /**
@@ -233,7 +245,7 @@ public class MongodbSyncService {
             pk = entry.getValue();
         }
 
-        Map<String, String> columnsMap = SyncUtil.getColumn(dbMapping, data);
+        Map<String, String> columnsMap = SyncUtil.getColumnsMap(dbMapping, data);
             //获取源数据字段类型
         document = new Document();
         for (Map.Entry<String, String> entry : columnsMap.entrySet()) {
@@ -279,9 +291,6 @@ public class MongodbSyncService {
                 //collection   可以对mongo库进行操作 插入数据
                 collections = mongodbTemplate.getCollection(batchExecutor.getMongoClient(),database,collection);
                 collections.insertOne(document);
-                //清空集合
-                notCache.clear();
-                columnsMap.clear();
             }catch (Exception e){
                 logger.info("数据插入失败:{}",e);
             }
@@ -325,7 +334,7 @@ public class MongodbSyncService {
                 pk = entry.getValue();
             }
             Object pkValue = null;
-            Map<String, String> columnsMap = SyncUtil.getColumn(dbMapping, data);
+            Map<String, String> columnsMap = SyncUtil.getColumnsMap(dbMapping, data);
             for (Map.Entry<String, String> mapping : columnsMap.entrySet()) {
                 if (pk.equals(mapping.getValue())){
                     String pkName = mapping.getValue();
@@ -367,7 +376,6 @@ public class MongodbSyncService {
                 }
                 //修改数据   获取_id   _id 和主键没有关系 通过mysql主键
                 UpdateResult updateResult = collections.updateMany(Filters.eq("_id", pkValue), new Document("$set", documentNew));
-                columnsMap.clear();
         } catch (Exception e) {
             logger.info("数据更新失败:{}",e);
         }
