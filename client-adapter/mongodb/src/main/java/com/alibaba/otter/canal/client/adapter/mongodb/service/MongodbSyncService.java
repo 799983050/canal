@@ -138,26 +138,24 @@ public class MongodbSyncService {
                         if (config.getConcurrent()) {
                             //封装提取原始binlog的DML
                             List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
-                            for (int i = 0; i < singleDmls.size(); i++) {
+                            singleDmls.forEach(singleDml -> {
                                 // 哪张表 数据同步总量  当前第几条  剩余多少条
                                 LoggerMessager.DataSize(config.getDbMapping().getTargetTable(),dmls.size(),counts,dmls.size()-counts);
-                                SingleDml singleDml = singleDmls.get(i);
                                 int hash = pkHash(config.getDbMapping(), singleDml.getData());
                                 SyncItem syncItem = new SyncItem(config, singleDml);
                                 dmlsPartition[hash].add(syncItem);
-                            }
+                            });
                             singleDmls.clear();
                         } else {
                             int hash = 0;
                             //对  dml数据进行再封装
                             List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
-                            for (int i = 0; i < singleDmls.size(); i++) {
+                            singleDmls.forEach(singleDml -> {
                                 //  数据同步总量  当前第几条  剩余多少条
                                 LoggerMessager.DataSize(config.getDbMapping().getTargetTable(),dmls.size(),counts,dmls.size()-counts);
-                                SingleDml singleDml = singleDmls.get(i);
                                 SyncItem syncItem = new SyncItem(config, singleDml);
                                 dmlsPartition[hash].add(syncItem);
-                            }
+                            });
                             singleDmls.clear();
                         }
                     }
@@ -203,9 +201,6 @@ public class MongodbSyncService {
                     update(batchExecutor,config, dml);
                 } else if (type != null && type.equalsIgnoreCase("DELETE")) {
                     delete(batchExecutor,config, dml);
-                }
-                if (logger.isDebugEnabled()) {
-                    logger.debug("DML: {}", JSON.toJSONString(dml, SerializerFeature.WriteMapNullValue));
                 }
             } catch (SQLException e) {
                 LoggerMessager.exceptionData(dml);

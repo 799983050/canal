@@ -13,11 +13,13 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import javax.sql.DataSource;
 
 import com.alibaba.otter.canal.client.adapter.rdb.config.MirrorDbConfig;
+import com.alibaba.otter.canal.client.adapter.rdb.logger.LoggerMessager;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -143,7 +145,9 @@ public class RdbSyncService {
      * @param dmls 批量 DML
      */
     public void sync(Map<String, Map<String, MappingConfig>> mappingConfig, List<Dml> dmls) {
+        AtomicInteger count = new AtomicInteger(1);
         sync(dmls, dml -> {
+            int counts = count.getAndIncrement();
             String destination = StringUtils.trimToEmpty(dml.getDestination());
             String database = dml.getDatabase();
             String table = dml.getTable();
@@ -173,6 +177,7 @@ public class RdbSyncService {
                     //封装提取原始binlog的DML
                     List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
                     singleDmls.forEach(singleDml -> {
+                        LoggerMessager.DataSize(config.getDbMapping().getTargetTable(),dmls.size(),counts,dmls.size()-counts);
                         int hash = pkHash(config.getDbMapping(), singleDml.getData());
                         SyncItem syncItem = new SyncItem(config, singleDml);
                         dmlsPartition[hash].add(syncItem);
@@ -183,6 +188,8 @@ public class RdbSyncService {
                     //对  dml数据进行再封装
                     List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
                     singleDmls.forEach(singleDml -> {
+                        //  数据同步总量  当前第几条  剩余多少条
+                        LoggerMessager.DataSize(config.getDbMapping().getTargetTable(),dmls.size(),counts,dmls.size()-counts);
                         SyncItem syncItem = new SyncItem(config, singleDml);
                         dmlsPartition[hash].add(syncItem);
                     });
@@ -239,9 +246,6 @@ public class RdbSyncService {
                     update(batchExecutor, config, dml);
                 } else if (type != null && type.equalsIgnoreCase("DELETE")) {
                     delete(batchExecutor, config, dml);
-                }
-                if (logger.isDebugEnabled()) {
-                    logger.debug("DML: {}", JSON.toJSONString(dml, SerializerFeature.WriteMapNullValue));
                 }
             } catch (SQLException e) {
                 throw new RuntimeException(e);

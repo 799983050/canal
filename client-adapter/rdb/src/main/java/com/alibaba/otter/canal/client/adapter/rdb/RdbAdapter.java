@@ -12,6 +12,7 @@ import java.util.concurrent.Future;
 
 import javax.sql.DataSource;
 
+import com.alibaba.otter.canal.client.adapter.rdb.logger.LoggerMessager;
 import org.apache.commons.lang.BooleanUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -160,6 +161,8 @@ public class RdbAdapter implements OuterAdapter {
          * 提供了两种选择：一种rdbSyncService：自己可以对字段做映射关系
          * 另一种rdbMirrorDbSyncService： 就是字段完全一样（镜像库）
          */
+        long start = System.currentTimeMillis();
+        LoggerMessager.batchSyncStart(start);
         Future<Boolean> future1 = executorService.submit(() -> {
             rdbSyncService.sync(mappingConfigCache, dmls);
             return true;
@@ -171,6 +174,8 @@ public class RdbAdapter implements OuterAdapter {
         try {
             future1.get();
             future2.get();
+            long over = System.currentTimeMillis();
+            LoggerMessager.batchSyncOver(start,over);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }finally {
