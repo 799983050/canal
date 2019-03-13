@@ -6,9 +6,11 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.sql.DataSource;
 
+import com.alibaba.otter.canal.client.adapter.rdb.logger.LoggerMessager;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,8 +73,10 @@ public class RdbMirrorDbSyncService {
             }
         }
         if (!dmlList.isEmpty()) {
+            AtomicInteger count = new AtomicInteger(1);
             rdbSyncService.sync(dmlList,
                 dml -> {
+                    int counts = count.getAndIncrement();
                     MirrorDbConfig mirrorDbConfig = mirrorDbConfigCache.get(dml.getDestination() + "."
                                                                             + dml.getDatabase());
                     if (mirrorDbConfig == null) {
@@ -84,24 +88,28 @@ public class RdbMirrorDbSyncService {
                     if (config == null) {
                         return false;
                     }
-
                     if (config.getConcurrent()) {
                         List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
                         singleDmls.forEach(singleDml -> {
+                            LoggerMessager.DataSize(config.getDbMapping().getTargetTable(),dmls.size(),counts,dmls.size()-counts);
                             int hash = rdbSyncService.pkHash(config.getDbMapping(), singleDml.getData());
                             RdbSyncService.SyncItem syncItem = new RdbSyncService.SyncItem(config, singleDml);
                             rdbSyncService.getDmlsPartition()[hash].add(syncItem);
                         });
+                        singleDmls.clear();
                     } else {
                         int hash = 0;
                         List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
                         singleDmls.forEach(singleDml -> {
+                            LoggerMessager.DataSize(config.getDbMapping().getTargetTable(),dmls.size(),counts,dmls.size()-counts);
                             RdbSyncService.SyncItem syncItem = new RdbSyncService.SyncItem(config, singleDml);
                             rdbSyncService.getDmlsPartition()[hash].add(syncItem);
                         });
+                        singleDmls.clear();
                     }
                     return true;
                 });
+            dmlList.clear();
         }
     }
 

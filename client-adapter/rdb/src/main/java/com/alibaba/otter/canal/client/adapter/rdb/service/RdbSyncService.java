@@ -313,6 +313,7 @@ public class RdbSyncService {
             //同步
             batchExecutor.execute(insertSql.toString(), values);
         } catch (SQLException e) {
+            logger.error("sql语句执行异常：[{}],[{}]",e.getMessage(),dml);
             if (skipDupException
                 && (e.getMessage().contains("Duplicate entry") || e.getMessage().startsWith("ORA-00001: 违反唯一约束条件"))) {
                 // ignore
@@ -391,7 +392,11 @@ public class RdbSyncService {
 
         // 拼接主键
         appendCondition(dbMapping, updateSql, ctype, values, data, old);
-        batchExecutor.execute(updateSql.toString(), values);
+        try {
+            batchExecutor.execute(updateSql.toString(), values);
+        } catch (Exception e) {
+            logger.error("sql语句执行异常：[{}],[{}]",e.getMessage(),dml);
+        }
         if (logger.isTraceEnabled()) {
             logger.trace("Update target table, sql: {}", updateSql);
         }
@@ -423,7 +428,11 @@ public class RdbSyncService {
         List<Map<String, ?>> values = new ArrayList<>();
         // 拼接主键
         appendCondition(dbMapping, sql, ctype, values, data);
-        batchExecutor.execute(sql.toString(), values);
+        try {
+            batchExecutor.execute(sql.toString(), values);
+        } catch (Exception e) {
+            logger.error("sql语句执行异常：[{}],[{}]",e.getMessage(),dml);
+        }
         if (logger.isTraceEnabled()) {
             logger.trace("Delete from target table, sql: {}", sql);
         }
