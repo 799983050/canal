@@ -1,5 +1,7 @@
 package com.alibaba.otter.canal.client.adapter.mongodb.logger;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.alibaba.otter.canal.client.adapter.mongodb.service.MongodbSyncService;
 import com.alibaba.otter.canal.client.adapter.mongodb.support.SingleDml;
 import org.slf4j.Logger;
@@ -28,7 +30,7 @@ public class LoggerMessager {
 
     //  单条同步结束时间和 业务处理时间
     public static void exceptionData(SingleDml dml){
-        logger.info("同步失败数据: filed syncData =====>>>>:[{}]",dml);
+        logger.info("同步失败数据: filed syncData =====>>>>:[{}]",JSON.toJSONString(dml, SerializerFeature.WriteMapNullValue));
     }
 
     public static void batchSyncOver(long batchStart,long batchOver){
